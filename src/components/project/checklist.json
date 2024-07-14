@@ -1,0 +1,17 @@
+{
+  "collectionName": "components_project_checklists",
+  "info": {
+    "displayName": "checklist",
+    "icon": "bulletList",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "content": {
+      "displayName": "todo",
+      "type": "component",
+      "repeatable": true,
+      "component": "project.todo"
+    }
+  }
+}

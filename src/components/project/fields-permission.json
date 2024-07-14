@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_project_fields_permissions",
+  "info": {
+    "displayName": "fields_permission",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "field": {
+      "type": "string",
+      "required": true
+    },
+    "modify": {
+      "type": "boolean",
+      "default": true,
+      "required": true
+    }
+  }
+}

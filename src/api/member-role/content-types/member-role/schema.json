@@ -1,0 +1,62 @@
+{
+  "kind": "collectionType",
+  "collectionName": "member_roles",
+  "info": {
+    "singularName": "member-role",
+    "pluralName": "member-roles",
+    "displayName": "member_role",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "subject": {
+      "type": "string",
+      "required": true,
+      "default": "default"
+    },
+    "ACL": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.collection-permission"
+    },
+    "members": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member.member",
+      "inversedBy": "member_roles"
+    },
+    "by_project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "member_roles"
+    },
+    "by_card": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::card.card",
+      "inversedBy": "member_roles"
+    },
+    "by_board": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::board.board",
+      "inversedBy": "board_members_roles"
+    },
+    "by_team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "member_roles"
+    },
+    "by_team_channel": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team-channel.team-channel",
+      "inversedBy": "member_roles"
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "kind": "collectionType",
+  "collectionName": "cards",
+  "info": {
+    "singularName": "card",
+    "pluralName": "cards",
+    "displayName": "card",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "default": "task"
+    },
+    "status": {
+      "type": "string"
+    },
+    "content": {
+      "type": "richtext"
+    },
+    "followed_bies": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "followed_cards"
+    },
+    "jsonContent": {
+      "type": "json"
+    },
+    "default_version": {
+      "type": "integer"
+    },
+    "overviews": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::overview.overview",
+      "mappedBy": "card"
+    },
+    "importance": {
+      "type": "decimal",
+      "default": 40
+    },
+    "urgency": {
+      "type": "decimal",
+      "default": 40
+    },
+    "score": {
+      "type": "integer",
+      "default": 1
+    },
+    "card_kanban": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::kanban.kanban",
+      "inversedBy": "relate_by_card"
+    },
+    "todogroups": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::todogroup.todogroup",
+      "mappedBy": "card"
+    },
+    "chat_service": {
+      "type": "json"
+    },
+    "color_marker": {
+      "type": "string"
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_cards"
+    },
+    "blocked": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "storage": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::storage.storage",
+      "inversedBy": "belonged_card"
+    },
+    "column": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::column.column",
+      "inversedBy": "cards"
+    },
+    "schedule": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::schedule.schedule",
+      "mappedBy": "by_card"
+    },
+    "card_members": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member.member",
+      "mappedBy": "by_cards"
+    },
+    "member_roles": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member-role.member-role",
+      "mappedBy": "by_card"
+    },
+    "readonly": {
+      "type": "boolean",
+      "default": false
+    },
+    "protected": {
+      "type": "boolean",
+      "default": false
+    },
+    "card_documents": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::document.document",
+      "mappedBy": "by_card"
+    },
+    "expand": {
+      "type": "boolean",
+      "default": true
+    },
+    "mm_thread": {
+      "type": "json"
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "mm_feedback_group": {
+      "type": "json"
+    },
+    "feedback": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::todogroup.todogroup"
+    },
+    "completed_by": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member.member",
+      "mappedBy": "completed_cards"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

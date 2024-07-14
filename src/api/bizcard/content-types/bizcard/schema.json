@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "bizcards",
+  "info": {
+    "singularName": "bizcard",
+    "pluralName": "bizcards",
+    "displayName": "bizcard",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "avatar": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "email": {
+      "type": "email"
+    },
+    "address": {
+      "type": "text"
+    },
+    "providers": {
+      "displayName": "provider",
+      "type": "component",
+      "repeatable": true,
+      "component": "biz-card.provider"
+    },
+    "bizcard_collection": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::bizcard-collection.bizcard-collection",
+      "mappedBy": "bizcard"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "bizcards"
+    },
+    "alias": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "default_provider": {
+      "type": "string"
+    }
+  }
+}

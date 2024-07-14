@@ -1,0 +1,13 @@
+{
+  "collectionName": "components_atom_tags",
+  "info": {
+    "displayName": "tag",
+    "icon": "hashtag"
+  },
+  "options": {},
+  "attributes": {
+    "tag": {
+      "type": "string"
+    }
+  }
+}

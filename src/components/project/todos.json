@@ -1,0 +1,17 @@
+{
+  "collectionName": "components_project_todos",
+  "info": {
+    "displayName": "todos"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "todo": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.todo"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "collectionName": "components_project_invite_uris",
+  "info": {
+    "displayName": "invite_uri",
+    "icon": "envelop",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "invite_code": {
+      "type": "text"
+    },
+    "max_total": {
+      "type": "integer"
+    },
+    "up_time": {
+      "type": "datetime"
+    },
+    "enable": {
+      "type": "boolean",
+      "default": true
+    },
+    "invitor": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "was_inviteds": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "message": {
+      "type": "text"
+    }
+  }
+}

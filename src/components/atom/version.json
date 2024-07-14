@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_atom_versions",
+  "info": {
+    "displayName": "version",
+    "icon": "write"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    }
+  }
+}

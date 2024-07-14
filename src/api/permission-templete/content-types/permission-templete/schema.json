@@ -1,0 +1,14 @@
+{
+  "kind": "singleType",
+  "collectionName": "permission_templetes",
+  "info": {
+    "singularName": "permission-templete",
+    "pluralName": "permission-templetes",
+    "displayName": "permission_templete"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {}
+}

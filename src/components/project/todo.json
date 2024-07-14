@@ -1,0 +1,33 @@
+{
+  "collectionName": "components_project_todo",
+  "info": {
+    "displayName": "todo",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "status": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "start": {
+      "type": "datetime"
+    },
+    "end": {
+      "type": "datetime"
+    },
+    "executor": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "content": {
+      "type": "richtext"
+    },
+    "jsonContent": {
+      "type": "json"
+    }
+  }
+}

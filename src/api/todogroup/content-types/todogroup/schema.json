@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "todogroups",
+  "info": {
+    "singularName": "todogroup",
+    "pluralName": "todogroups",
+    "displayName": "todogroup",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "default": "未命名待办分组"
+    },
+    "todos": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::todo.todo",
+      "mappedBy": "todogroup"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "todogroups"
+    },
+    "card": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::card.card",
+      "inversedBy": "todogroups"
+    },
+    "project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "todogroups"
+    },
+    "kanban": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::kanban.kanban"
+    },
+    "color_marker": {
+      "type": "string"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "collectionName": "components_user_creators",
+  "info": {
+    "displayName": "creator",
+    "icon": "user",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "role": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "responsibility": {
+      "type": "text"
+    },
+    "isOwner": {
+      "type": "boolean",
+      "default": false
+    },
+    "isExcutor": {
+      "type": "boolean",
+      "default": false
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

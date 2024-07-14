@@ -1,0 +1,82 @@
+{
+  "kind": "collectionType",
+  "collectionName": "boards",
+  "info": {
+    "singularName": "board",
+    "pluralName": "boards",
+    "displayName": "board",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "unread_count": {
+      "type": "integer"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "boards"
+    },
+    "groups": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::group.group",
+      "mappedBy": "board"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_boards"
+    },
+    "mm_channel_id": {
+      "type": "uid"
+    },
+    "mm_team_id": {
+      "type": "uid"
+    },
+    "board_members": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member.member",
+      "mappedBy": "by_board"
+    },
+    "board_members_roles": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member-role.member-role",
+      "mappedBy": "by_board"
+    },
+    "belonged": {
+      "type": "string"
+    },
+    "readonly": {
+      "type": "boolean",
+      "default": false
+    },
+    "protected": {
+      "type": "boolean",
+      "default": false
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "kanban",
+        "classroom",
+        "segment",
+        "assets"
+      ],
+      "default": "kanban"
+    }
+  }
+}

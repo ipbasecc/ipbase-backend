@@ -1,0 +1,79 @@
+{
+  "kind": "collectionType",
+  "collectionName": "todos",
+  "info": {
+    "singularName": "todo",
+    "pluralName": "todos",
+    "displayName": "todo",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "todogroup": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::todogroup.todogroup",
+      "inversedBy": "todos"
+    },
+    "content": {
+      "type": "text"
+    },
+    "status": {
+      "type": "boolean",
+      "default": false
+    },
+    "importance": {
+      "type": "decimal"
+    },
+    "urgency": {
+      "type": "decimal"
+    },
+    "color_marker": {
+      "type": "string"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "attachment": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "executor": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "executor_todo"
+    },
+    "mm_thread": {
+      "type": "json"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "todo",
+        "node"
+      ]
+    },
+    "completed_by": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member.member",
+      "mappedBy": "completed_todos"
+    },
+    "props": {
+      "type": "json"
+    }
+  }
+}

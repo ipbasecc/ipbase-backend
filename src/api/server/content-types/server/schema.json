@@ -1,0 +1,31 @@
+{
+  "kind": "singleType",
+  "collectionName": "servers",
+  "info": {
+    "singularName": "server",
+    "pluralName": "servers",
+    "displayName": "server",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "http_api_endpoint": {
+      "type": "text"
+    },
+    "ws_api_endpoint": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "graphql_endpoint": {
+      "type": "text"
+    },
+    "ws_endpoint": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_project_roles",
+  "info": {
+    "displayName": "role",
+    "icon": "shield",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "role": {
+      "type": "string"
+    },
+    "members": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "collection_permission": {
+      "displayName": "collection_permission",
+      "type": "component",
+      "repeatable": true,
+      "component": "project.collection-permission"
+    }
+  }
+}

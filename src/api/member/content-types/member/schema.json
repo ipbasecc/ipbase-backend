@@ -1,0 +1,110 @@
+{
+  "kind": "collectionType",
+  "collectionName": "members",
+  "info": {
+    "singularName": "member",
+    "pluralName": "members",
+    "displayName": "member",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "color_marker": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "position": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "is_blocked": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "private_email": {
+      "type": "email"
+    },
+    "private_avatar": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "by_board": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::board.board",
+      "inversedBy": "board_members"
+    },
+    "by_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "by_members"
+    },
+    "schedule_events": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::schedule-event.schedule-event",
+      "mappedBy": "executor"
+    },
+    "member_roles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member-role.member-role",
+      "mappedBy": "members"
+    },
+    "by_team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "members"
+    },
+    "is_leaved": {
+      "type": "boolean"
+    },
+    "by_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "inversedBy": "card_members"
+    },
+    "by_projects": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::project.project",
+      "inversedBy": "project_members"
+    },
+    "by_team_channels": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::team-channel.team-channel",
+      "inversedBy": "members"
+    },
+    "completed_todos": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::todo.todo",
+      "inversedBy": "completed_by"
+    },
+    "completed_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "inversedBy": "completed_by"
+    }
+  }
+}

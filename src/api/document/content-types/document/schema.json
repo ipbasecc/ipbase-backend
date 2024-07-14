@@ -1,0 +1,65 @@
+{
+  "kind": "collectionType",
+  "collectionName": "documents",
+  "info": {
+    "singularName": "document",
+    "pluralName": "documents",
+    "displayName": "document",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "jsonContent": {
+      "type": "json"
+    },
+    "by_card": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::card.card",
+      "inversedBy": "card_documents"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "document"
+    },
+    "by_project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "project_documents"
+    },
+    "by_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "user_documents"
+    },
+    "type": {
+      "type": "string",
+      "default": "document"
+    },
+    "mm_thread": {
+      "type": "json"
+    },
+    "passcode": {
+      "type": "password"
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

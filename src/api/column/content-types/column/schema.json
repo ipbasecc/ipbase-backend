@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "columns",
+  "info": {
+    "singularName": "column",
+    "pluralName": "columns",
+    "displayName": "column",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "default": "pending"
+    },
+    "executor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "executor_of_columns"
+    },
+    "unread_count": {
+      "type": "integer"
+    },
+    "kanban": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::kanban.kanban",
+      "inversedBy": "columns"
+    },
+    "type": {
+      "type": "string"
+    },
+    "cards": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::card.card",
+      "mappedBy": "column"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_columns"
+    },
+    "readonly": {
+      "type": "boolean",
+      "default": false
+    },
+    "protected": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

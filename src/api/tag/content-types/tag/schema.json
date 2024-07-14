@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tags",
+  "info": {
+    "singularName": "tag",
+    "pluralName": "tags",
+    "displayName": "tag",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "default": "untitled"
+    },
+    "elements": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::element.element",
+      "mappedBy": "tags"
+    },
+    "taged_count": {
+      "type": "integer"
+    }
+  }
+}

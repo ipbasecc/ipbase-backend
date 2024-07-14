@@ -1,0 +1,39 @@
+{
+  "collectionName": "components_project_collection_permissions",
+  "info": {
+    "displayName": "collection_permission",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "collection": {
+      "type": "string",
+      "required": true
+    },
+    "create": {
+      "type": "boolean",
+      "default": true,
+      "required": true
+    },
+    "read": {
+      "type": "boolean",
+      "default": true,
+      "required": true
+    },
+    "modify": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "delete": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "fields_permission": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.fields-permission"
+    }
+  }
+}

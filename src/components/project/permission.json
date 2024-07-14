@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_project_permissions",
+  "info": {
+    "displayName": "permission",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "role": {
+      "type": "string"
+    },
+    "collection_permission": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.collection-permission"
+    }
+  }
+}

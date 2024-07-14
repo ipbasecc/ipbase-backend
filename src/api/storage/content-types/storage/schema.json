@@ -1,0 +1,112 @@
+{
+  "kind": "collectionType",
+  "collectionName": "storages",
+  "info": {
+    "singularName": "storage",
+    "pluralName": "storages",
+    "displayName": "storage",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "files": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "storage": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::storage.storage",
+      "inversedBy": "sub_folders"
+    },
+    "sub_folders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage.storage",
+      "mappedBy": "storage"
+    },
+    "belonged_project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "storages"
+    },
+    "storage_files": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage-file.storage-file",
+      "mappedBy": "storage"
+    },
+    "belonged_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "storages"
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_storages"
+    },
+    "can_read_user": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "can_write_user": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "belonged_card": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::card.card",
+      "mappedBy": "storage"
+    },
+    "color_marker": {
+      "type": "json"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "local",
+        "azure_blob"
+      ],
+      "default": "local"
+    },
+    "azureInfo": {
+      "type": "json"
+    },
+    "passcode": {
+      "type": "password"
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

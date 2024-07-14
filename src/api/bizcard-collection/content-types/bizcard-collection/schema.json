@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "bizcard_collections",
+  "info": {
+    "singularName": "bizcard-collection",
+    "pluralName": "bizcard-collections",
+    "displayName": "bizcardCollectionItem"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "text"
+    },
+    "tags": {
+      "displayName": "tag",
+      "type": "component",
+      "repeatable": true,
+      "component": "atom.tag"
+    },
+    "bizcard": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::bizcard.bizcard",
+      "inversedBy": "bizcard_collection"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "bizcard_collection_items"
+    }
+  }
+}

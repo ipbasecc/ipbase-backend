@@ -1,0 +1,88 @@
+{
+  "kind": "collectionType",
+  "collectionName": "kanbans",
+  "info": {
+    "singularName": "kanban",
+    "pluralName": "kanbans",
+    "displayName": "kanban",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "type": {
+      "type": "string",
+      "default": "kanban"
+    },
+    "icon": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "status": {
+      "type": "string"
+    },
+    "unread_count": {
+      "type": "integer"
+    },
+    "columns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::column.column",
+      "mappedBy": "kanban"
+    },
+    "group": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::group.group",
+      "inversedBy": "kanbans"
+    },
+    "relate_by_card": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::card.card",
+      "mappedBy": "card_kanban"
+    },
+    "preference": {
+      "type": "json"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_kanbans"
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "readonly": {
+      "type": "boolean",
+      "default": false
+    },
+    "protected": {
+      "type": "boolean",
+      "default": false
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

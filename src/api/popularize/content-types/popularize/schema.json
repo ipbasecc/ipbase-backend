@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "popularizes",
+  "info": {
+    "singularName": "popularize",
+    "pluralName": "popularizes",
+    "displayName": "popularize",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "type": {
+      "type": "string",
+      "required": true,
+      "default": "banner"
+    },
+    "medias": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "videos"
+      ]
+    },
+    "position": {
+      "type": "string",
+      "required": true,
+      "default": "homepage_right_bottom"
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "default": "未命名推广"
+    },
+    "uri": {
+      "type": "text"
+    },
+    "target": {
+      "type": "enumeration",
+      "enum": [
+        "_blank",
+        "_self",
+        "_parent",
+        "_top"
+      ]
+    },
+    "content": {
+      "type": "richtext"
+    }
+  }
+}

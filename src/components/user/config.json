@@ -1,0 +1,28 @@
+{
+  "collectionName": "components_user_configs",
+  "info": {
+    "displayName": "config",
+    "icon": "cog",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "default_bizcard": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::bizcard.bizcard"
+    },
+    "lang": {
+      "type": "string"
+    },
+    "theme": {
+      "type": "string"
+    },
+    "navigation": {
+      "type": "json"
+    },
+    "project_preference": {
+      "type": "json"
+    }
+  }
+}

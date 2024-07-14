@@ -1,0 +1,72 @@
+{
+  "kind": "collectionType",
+  "collectionName": "teams",
+  "info": {
+    "singularName": "team",
+    "pluralName": "teams",
+    "displayName": "team",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "mm_team": {
+      "type": "json"
+    },
+    "team_channels": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::team-channel.team-channel",
+      "mappedBy": "team"
+    },
+    "members": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member.member",
+      "mappedBy": "by_team"
+    },
+    "member_roles": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member-role.member-role",
+      "mappedBy": "by_team"
+    },
+    "team_logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "projects": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project.project",
+      "mappedBy": "by_team"
+    },
+    "invite_uris": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.invite-uri"
+    },
+    "default_by": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "default_team"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "notification": {
+      "type": "text"
+    }
+  }
+}

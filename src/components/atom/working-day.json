@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_atom_working_days",
+  "info": {
+    "displayName": "Working Day",
+    "icon": "calendar",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "event": {
+      "type": "text"
+    },
+    "from": {
+      "type": "date",
+      "required": true
+    },
+    "to": {
+      "type": "date",
+      "required": true
+    }
+  }
+}

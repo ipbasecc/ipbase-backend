@@ -1,0 +1,32 @@
+{
+  "collectionName": "components_project_share_codes",
+  "info": {
+    "displayName": "share_code",
+    "icon": "paperPlane",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "code": {
+      "type": "string"
+    },
+    "disable": {
+      "type": "boolean"
+    },
+    "max_count": {
+      "type": "integer",
+      "default": 20
+    },
+    "up_time": {
+      "type": "date"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "props": {
+      "type": "json"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "storage_files",
+  "info": {
+    "singularName": "storage-file",
+    "pluralName": "storage-files",
+    "displayName": "storage_file",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "file": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "color_marker": {
+      "type": "string"
+    },
+    "storage": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::storage.storage",
+      "inversedBy": "storage_files"
+    },
+    "owner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "storage_files"
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

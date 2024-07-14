@@ -1,0 +1,190 @@
+{
+  "collectionName": "components_project_project_permission_templates",
+  "info": {
+    "displayName": "permission_template",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "project_name_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_description_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_type_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_cover_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_board_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_board_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_overview_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_overview_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_defaultVersion_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_todogroup_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_todogroup_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_todogroup_chat_service": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_invite": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_jsonContent_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_storge_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_permisssion_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_group_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_group_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_kanban_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_kanban_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_column_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_column_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_role_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "project_permission_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_name_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_type_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_status_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_content_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_jsonContent_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_overview_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_defaultVersion_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_importance_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_urgency_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_score_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_documnets_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_documnets_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_todogroups_create": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_todogroups_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_chatService_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_storage_access": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_storage_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_colorMarker_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_role_motify": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_permission_motify": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

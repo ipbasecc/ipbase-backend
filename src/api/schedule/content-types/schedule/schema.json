@@ -1,0 +1,92 @@
+{
+  "kind": "collectionType",
+  "collectionName": "schedules",
+  "info": {
+    "singularName": "schedule",
+    "pluralName": "schedules",
+    "displayName": "schedule",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "by_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "schedules"
+    },
+    "by_card": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::card.card",
+      "inversedBy": "schedule"
+    },
+    "by_project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "schedules"
+    },
+    "schedule_events": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::schedule-event.schedule-event",
+      "mappedBy": "schedule"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "O",
+        "P"
+      ]
+    },
+    "can_read_user": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "can_read_schedule"
+    },
+    "can_write_user": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "can_write_schedule"
+    },
+    "name": {
+      "type": "string",
+      "default": "未命名规划"
+    },
+    "icon": {
+      "type": "string",
+      "default": "event"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_schedule"
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "mm_thread": {
+      "type": "json"
+    },
+    "share_codes": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.share-code"
+    },
+    "description": {
+      "type": "text"
+    },
+    "disable_share": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

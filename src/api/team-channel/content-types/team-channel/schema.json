@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "team_channels",
+  "info": {
+    "singularName": "team-channel",
+    "pluralName": "team-channels",
+    "displayName": "team_channel",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "mm_channel": {
+      "type": "json"
+    },
+    "team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "team_channels"
+    },
+    "members": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::member.member",
+      "mappedBy": "by_team_channels"
+    },
+    "member_roles": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member-role.member-role",
+      "mappedBy": "by_team_channel"
+    },
+    "invite_uris": {
+      "type": "component",
+      "repeatable": true,
+      "component": "project.invite-uri"
+    },
+    "type": {
+      "type": "string"
+    }
+  }
+}

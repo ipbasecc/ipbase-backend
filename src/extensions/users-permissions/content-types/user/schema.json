@@ -1,0 +1,323 @@
+{
+  "kind": "collectionType",
+  "collectionName": "up_users",
+  "info": {
+    "name": "user",
+    "description": "",
+    "singularName": "user",
+    "pluralName": "users",
+    "displayName": "User"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "unique": true,
+      "configurable": false,
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "minLength": 6,
+      "configurable": false,
+      "required": true
+    },
+    "provider": {
+      "type": "string",
+      "configurable": false
+    },
+    "password": {
+      "type": "password",
+      "minLength": 6,
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "resetPasswordToken": {
+      "type": "string",
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "confirmationToken": {
+      "type": "string",
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false,
+      "configurable": false
+    },
+    "blocked": {
+      "type": "boolean",
+      "default": false,
+      "configurable": false
+    },
+    "role": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.role",
+      "inversedBy": "users",
+      "configurable": false
+    },
+    "profile": {
+      "type": "component",
+      "repeatable": false,
+      "component": "user.profile"
+    },
+    "user_channel": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::channel.channel",
+      "mappedBy": "channel_owner"
+    },
+    "storageCount": {
+      "type": "float"
+    },
+    "bizcards": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::bizcard.bizcard",
+      "mappedBy": "user"
+    },
+    "bizcard_collection_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::bizcard-collection.bizcard-collection",
+      "mappedBy": "user"
+    },
+    "config": {
+      "displayName": "config",
+      "type": "component",
+      "repeatable": false,
+      "component": "user.config"
+    },
+    "elements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::element.element",
+      "mappedBy": "author"
+    },
+    "favorites": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::favorite.favorite",
+      "mappedBy": "owner"
+    },
+    "liked_element": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::element.element",
+      "inversedBy": "liked_by"
+    },
+    "unliked_element": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::element.element",
+      "inversedBy": "unliked_by"
+    },
+    "viewed_elements": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::element.element",
+      "inversedBy": "viewed_by"
+    },
+    "follows": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "followed"
+    },
+    "followed": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "follows"
+    },
+    "self_tags": {
+      "type": "json"
+    },
+    "created_elements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::element.element",
+      "mappedBy": "creator"
+    },
+    "messages": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::message.message",
+      "mappedBy": "sender"
+    },
+    "talkers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::talker.talker",
+      "mappedBy": "user"
+    },
+    "liked_messages": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::message.message",
+      "mappedBy": "liked_by"
+    },
+    "unliked_messages": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::message.message",
+      "mappedBy": "unliked_by"
+    },
+    "mm_profile": {
+      "type": "json"
+    },
+    "todogroups": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::todogroup.todogroup",
+      "mappedBy": "user"
+    },
+    "executor_of_columns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::column.column",
+      "mappedBy": "executor"
+    },
+    "followed_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "mappedBy": "followed_bies"
+    },
+    "mm_projectChatService_team": {
+      "type": "json"
+    },
+    "created_projects": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project.project",
+      "mappedBy": "creator"
+    },
+    "created_kanbans": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::kanban.kanban",
+      "mappedBy": "creator"
+    },
+    "created_groups": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::group.group",
+      "mappedBy": "creator"
+    },
+    "created_boards": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::board.board",
+      "mappedBy": "creator"
+    },
+    "created_columns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::column.column",
+      "mappedBy": "creator"
+    },
+    "created_cards": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::card.card",
+      "mappedBy": "creator"
+    },
+    "storage_files": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage-file.storage-file",
+      "mappedBy": "owner"
+    },
+    "created_storages": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage.storage",
+      "mappedBy": "creator"
+    },
+    "storages": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage.storage",
+      "mappedBy": "belonged_user"
+    },
+    "document": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::document.document",
+      "mappedBy": "creator"
+    },
+    "projects": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::project.project",
+      "mappedBy": "members"
+    },
+    "mm_user_id": {
+      "type": "uid"
+    },
+    "executor_todo": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::todo.todo",
+      "mappedBy": "executor"
+    },
+    "schedules": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::schedule.schedule",
+      "mappedBy": "by_user"
+    },
+    "can_read_schedule": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::schedule.schedule",
+      "inversedBy": "can_read_user"
+    },
+    "can_write_schedule": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::schedule.schedule",
+      "inversedBy": "can_write_user"
+    },
+    "by_members": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::member.member",
+      "mappedBy": "by_user"
+    },
+    "user_documents": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::document.document",
+      "mappedBy": "by_user"
+    },
+    "schedule_events": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::schedule-event.schedule-event",
+      "mappedBy": "creator"
+    },
+    "created_schedule": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::schedule.schedule",
+      "mappedBy": "creator"
+    },
+    "default_team": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::team.team",
+      "inversedBy": "default_by"
+    }
+  }
+}

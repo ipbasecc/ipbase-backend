@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "talkers",
+  "info": {
+    "singularName": "talker",
+    "pluralName": "talkers",
+    "displayName": "talker",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "nickname": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "isMuted": {
+      "type": "boolean",
+      "default": false
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "talkers"
+    },
+    "message": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::message.message",
+      "mappedBy": "talker"
+    }
+  }
+}

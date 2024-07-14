@@ -1,0 +1,71 @@
+{
+  "kind": "collectionType",
+  "collectionName": "schedule_events",
+  "info": {
+    "singularName": "schedule-event",
+    "pluralName": "schedule-events",
+    "displayName": "schedule_event",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Subject": {
+      "type": "string",
+      "required": true,
+      "default": "未命名事件"
+    },
+    "StartTime": {
+      "type": "datetime"
+    },
+    "EndTime": {
+      "type": "datetime"
+    },
+    "location": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "IsAllDay": {
+      "type": "boolean",
+      "default": false
+    },
+    "recurrenceRule": {
+      "type": "string"
+    },
+    "recurrenceException": {
+      "type": "string"
+    },
+    "recurrenceID": {
+      "type": "biginteger"
+    },
+    "schedule": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::schedule.schedule",
+      "inversedBy": "schedule_events"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "schedule_events"
+    },
+    "executor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::member.member",
+      "inversedBy": "schedule_events"
+    },
+    "EventType": {
+      "type": "string",
+      "default": "Requested"
+    },
+    "Guid": {
+      "type": "uid"
+    }
+  }
+}
