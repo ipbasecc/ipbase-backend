@@ -7,8 +7,8 @@ const { STS } = require('ali-oss');
 
 const sts = new STS({
 //   endpoint: 'oss-cn-shanghai.aliyuncs.com',
-  accessKeyId: process.env.ACCESS_KEY_ID,
-  accessKeySecret: process.env.ACCESS_KEY_SECRET,
+  accessKeyId: process.env.ALI_OSS_ACCESS_KEY_ID,
+  accessKeySecret: process.env.ALI_OSS_ACCESS_KEY_SECRET,
 });
 
 module.exports = {
