@@ -85,6 +85,30 @@
    > 1. 后端：上传源码到服务器，执行`yarn build`编译，之后执行`yarn start`启动服务，你也可以使用其它工具或者宝塔面板之后的运维工具来管理 node 项目；
    > 2. 前端: 本地编译`quasar build`，之后上传 dist 目录下对应类型文件夹下文件到服务器即可，推荐使用`quasar build -m pwa`将前端打包为 pwa 应用，以便将静态资源缓存到用户本地；
    > 3. 注意事项：（a）如果使用的是 Apache 服务器，注意配置 vue 的路由模式；（b）部署完 Mattermost 后务必先登陆 Mattermost 并确保反代、websocket 连接均正常
+7. 数据库创建命令：(自行替换数据库名称、密码等字段内容)
+   ```bash
+   // strapi
+    CREATE DATABASE ipbase_strapi WITH ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
+
+    CREATE USER ipbase_strapi WITH PASSWORD 'Hrt45HGDFr68GjGHFR';
+
+    GRANT ALL PRIVILEGES ON DATABASE ipbase_strapi to ipbase_strapi;
+
+    ALTER DATABASE ipbase_strapi OWNER TO ipbase_strapi;
+
+    GRANT USAGE, CREATE ON SCHEMA PUBLIC TO ipbase_strapi;
+
+  // mattermost
+    CREATE DATABASE ipbase_mm WITH ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
+
+    CREATE USER ipbase_mm WITH PASSWORD 'QstFhjyHRFer4VfBF';
+
+    GRANT ALL PRIVILEGES ON DATABASE ipbase_mm to ipbase_mm;
+
+    ALTER DATABASE ipbase_mm OWNER TO ipbase_mm;
+
+    GRANT USAGE, CREATE ON SCHEMA PUBLIC TO ipbase_mm;
+   ```
 
 ## 其它说明：
 
