@@ -98,7 +98,7 @@
 
     GRANT USAGE, CREATE ON SCHEMA PUBLIC TO ipbase_strapi;
 
-  // mattermost
+    // mattermost
     CREATE DATABASE ipbase_mm WITH ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
 
     CREATE USER ipbase_mm WITH PASSWORD 'QstFhjyHRFer4VfBF';
