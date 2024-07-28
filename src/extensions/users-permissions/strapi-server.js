@@ -20,6 +20,7 @@ module.exports = (plugin) => {
                         }
                     }
                 },
+                config: true,
                 profile: {
                     populate: {
                         avatar: {
@@ -171,7 +172,7 @@ module.exports = (plugin) => {
             if(user.default_team){
                 // @ts-ignore
                 let _team = await strapi.service('api::team.team').filterByAuth(user.default_team, user_id);
-                
+
                 // 如果用户是 “外部成员”，只返回基础数据，删除敏感数据
                 const userMember = _team?.members?.find(i => i.by_user.id === user_id);
                 // console.log('userMember',userMember)
@@ -188,7 +189,7 @@ module.exports = (plugin) => {
                     })
                     return _is
                 }
-                
+
                 const process_external_data = () => {
                     _team.members = [ userMember ];
                     delete _team.member_roles;
@@ -204,16 +205,16 @@ module.exports = (plugin) => {
                     } else {
                         _team.projects = []
                     }
-                    
+
                 }
-                
+
                 const isExternal = calcExternal();
                 // console.log('isExternal',isExternal)
                 if(isExternal){
                     process_external_data();
                     _team.isExternal = true
                 }
-                
+
                 // @ts-ignore
                 user.default_team = _team
             }
@@ -264,7 +265,7 @@ module.exports = (plugin) => {
             }
         })
         if(user) {
-            
+
             return user.profile
         }
     }
@@ -315,14 +316,14 @@ module.exports = (plugin) => {
             if(update.default_team){
                 // @ts-ignore
                 let _team = await strapi.service('api::team.team').filterByAuth(update.default_team, user_id);
-                
+
                 // 如果用户是 “外部成员”，只返回基础数据，删除敏感数据
                 const userMember = _team?.members?.find(i => i.by_user.id === user_id);
                 const roles_byMember = userMember.member_roles.map(i => i.id);
                 const roles_byTeam = _team.member_roles.map(i => i.id);
                 const userMember_byTeam = roles_byTeam.filter(i => roles_byMember.includes(i));
                 const userMemberRoles = _team.member_roles.filter(role => userMember_byTeam.includes(role.id));
-                
+
                 const process_external_data = () => {
                     _team.members = [ userMember ];
                     delete _team.member_roles;
@@ -382,7 +383,7 @@ module.exports = (plugin) => {
         const { code, password, passwordConfirmation } = ctx.request.body;
         // console.log('code',{ code, password, passwordConfirmation });
         // const user = await strapi.entityService.findOne('plugin::users-permissions.user',{ resetPasswordToken: code });
-        
+
         const user = await strapi.db.query('plugin::users-permissions.user').findOne({
             select: ['id','mm_profile'],
             where: { resetPasswordToken: code },
