@@ -2682,6 +2682,7 @@ export interface ApiTeamChannelTeamChannel extends Schema.CollectionType {
     >;
     invite_uris: Attribute.Component<'project.invite-uri', true>;
     type: Attribute.String;
+    purpose: Attribute.Text;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

@@ -3071,6 +3071,7 @@ type TeamChannel {
   mm_channel: JSON
   name: String
   publishedAt: DateTime
+  purpose: String
   team: TeamEntityResponse
   type: String
   updatedAt: DateTime
@@ -3102,6 +3103,7 @@ input TeamChannelFiltersInput {
   not: TeamChannelFiltersInput
   or: [TeamChannelFiltersInput]
   publishedAt: DateTimeFilterInput
+  purpose: StringFilterInput
   team: TeamFiltersInput
   type: StringFilterInput
   updatedAt: DateTimeFilterInput
@@ -3114,6 +3116,7 @@ input TeamChannelInput {
   mm_channel: JSON
   name: String
   publishedAt: DateTime
+  purpose: String
   team: ID
   type: String
 }

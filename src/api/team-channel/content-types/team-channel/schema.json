@@ -43,6 +43,9 @@
     },
     "type": {
       "type": "string"
+    },
+    "purpose": {
+      "type": "text"
     }
   }
 }
