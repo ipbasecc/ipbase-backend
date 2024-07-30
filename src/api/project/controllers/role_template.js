@@ -1,5 +1,5 @@
 module.exports = {
-    roleBase: async () => { 
+    roleBase: async () => {
         let role = [
             {
                 "role": "creator",
@@ -2941,7 +2941,7 @@ module.exports = {
                 ]
             },
             {
-                "role": "marster",
+                "role": "master",
                 "collection_permission": [
                     {
                         "collection": "project",
@@ -4690,6 +4690,6 @@ module.exports = {
                 ]
             },
         ]
-        return role; 
-    }, 
+        return role;
+    },
 };
