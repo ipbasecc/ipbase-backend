@@ -2641,6 +2641,7 @@ export interface ApiTeamTeam extends Schema.CollectionType {
     >;
     display_name: Attribute.String;
     notification: Attribute.Text;
+    introduce: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

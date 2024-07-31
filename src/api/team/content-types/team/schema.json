@@ -67,6 +67,9 @@
     },
     "notification": {
       "type": "text"
+    },
+    "introduce": {
+      "type": "json"
     }
   }
 }

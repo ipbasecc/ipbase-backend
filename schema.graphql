@@ -3050,6 +3050,7 @@ type Team {
   createdAt: DateTime
   default_by: UsersPermissionsUserEntityResponse
   display_name: String
+  introduce: JSON
   invite_uris(filters: ComponentProjectInviteUriFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): [ComponentProjectInviteUri]
   member_roles(filters: MemberRoleFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): MemberRoleRelationResponseCollection
   members(filters: MemberFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): MemberRelationResponseCollection
@@ -3145,6 +3146,7 @@ input TeamFiltersInput {
   default_by: UsersPermissionsUserFiltersInput
   display_name: StringFilterInput
   id: IDFilterInput
+  introduce: JSONFilterInput
   invite_uris: ComponentProjectInviteUriFiltersInput
   member_roles: MemberRoleFiltersInput
   members: MemberFiltersInput
@@ -3162,6 +3164,7 @@ input TeamFiltersInput {
 input TeamInput {
   default_by: ID
   display_name: String
+  introduce: JSON
   invite_uris: [ComponentProjectInviteUriInput]
   member_roles: [ID]
   members: [ID]

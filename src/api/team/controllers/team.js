@@ -239,6 +239,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 data: params,
                 populate: populate
             })
+            if(data.introduce){
+                params.introduce = data.introduce
+            }
             if(update){
                 return update
             }
