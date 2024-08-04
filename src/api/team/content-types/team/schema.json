@@ -70,6 +70,9 @@
     },
     "introduce": {
       "type": "json"
+    },
+    "config": {
+      "type": "json"
     }
   }
 }

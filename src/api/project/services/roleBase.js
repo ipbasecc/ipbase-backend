@@ -2552,7 +2552,7 @@ module.exports = {
                 ]
             },
             {
-                "role": "marster",
+                "role": "master",
                 "ACL": [
                     {
                         "collection": "project",
@@ -3037,15 +3037,15 @@ module.exports = {
                             }
                         ]
                     },
-                    role_schedule.marster,
-                    role_schedule_event.marster,
+                    role_schedule.master,
+                    role_schedule_event.master,
                     {
                         "collection": "card_schedule",
                         "create": true,
                         "delete": true,
                         "read": true,
                         "modify": true,
-                        "fields_permission": role_schedule.marster.fields_permission
+                        "fields_permission": role_schedule.master.fields_permission
                     },
                     {
                         "collection": "card_schedule_event",
@@ -3053,7 +3053,7 @@ module.exports = {
                         "delete": true,
                         "read": true,
                         "modify": true,
-                        "fields_permission": role_schedule_event.marster.fields_permission
+                        "fields_permission": role_schedule_event.master.fields_permission
                     },
                 ]
             },
@@ -4070,6 +4070,6 @@ module.exports = {
                 ]
             },
         ]
-        return role; 
-    }, 
+        return role;
+    },
 };

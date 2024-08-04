@@ -3047,6 +3047,7 @@ type TalkerRelationResponseCollection {
 }
 
 type Team {
+  config: JSON
   createdAt: DateTime
   default_by: UsersPermissionsUserEntityResponse
   display_name: String
@@ -3142,6 +3143,7 @@ type TeamEntityResponseCollection {
 
 input TeamFiltersInput {
   and: [TeamFiltersInput]
+  config: JSONFilterInput
   createdAt: DateTimeFilterInput
   default_by: UsersPermissionsUserFiltersInput
   display_name: StringFilterInput
@@ -3162,6 +3164,7 @@ input TeamFiltersInput {
 }
 
 input TeamInput {
+  config: JSON
   default_by: ID
   display_name: String
   introduce: JSON

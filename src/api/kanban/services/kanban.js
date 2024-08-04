@@ -36,10 +36,13 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                                 }
                             }
                         }
+                    },
+                    by_team: {
+                        fields: ['id']
                     }
                 }
             });
-            
+
             if(kanban?.relate_by_card) {
                 if(!belonged_card){
                     const card_id = kanban?.relate_by_card.id
@@ -258,8 +261,8 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
             return kanban
         }
     },
-    process_KanbanSourceData_byAuth(...args) {
-        const [ kanban, user_id, ACL, isSuper_member ] = args;
+    async process_KanbanSourceData_byAuth(...args) {
+        const [ kanban, user_id, ACL, isSuper_member, belongedInfo ] = args;
         // 私有卡片 - 管理组和卡片关联用户可见
         if(!isSuper_member) {
             kanban.columns = kanban.columns.map(c => ({
@@ -307,16 +310,52 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 }))
             }))
         }
-        
+
         kanban.columns = kanban.columns.map(column => ({
             ...column,
-            cards: column.cards?.length > 0 ? column.cards.map(card => {  
-                if (card.share_codes?.length > 0) {  
+            cards: column.cards?.length > 0 ? column.cards.map(card => {
+                if (card.share_codes?.length > 0) {
                     card.share_codes = card.share_codes.filter(code => code.creator.id === user_id);
-                }  
-                return card;  
+                }
+                return card;
             }) : []
         }))
+        if(belongedInfo.belonged_project.by_team){
+            // console.log('belongedInfo.belonged_project.by_team', belongedInfo.belonged_project.by_team)
+            const canShow = (members, roles) => {
+                const membersInCard = members.filter(i => i.by_user.id === user_id && i.subject !== 'unconfirmed' && i.subject !== 'blocked')
+                // console.log('membersInCard', membersInCard)
+                if(!members || !membersInCard?.map(i => i.by_user.id)?.includes(user_id)){
+                    return false
+                }
+                const rolesByFilters = membersInCard.map(i => i.member_roles?.map(j => j.id))?.flat(2);
+                const rolesIds = roles.map(j => j.id);
+                function hasIntersection(arr1, arr2) {
+                  const set1 = new Set(arr1);
+                  for (const num of arr2) {
+                    if (set1.has(num)) {
+                      return true; // 找到交集，返回true
+                    }
+                  }
+                  return false; // 没有找到交集，返回false
+                }
+
+                return hasIntersection(rolesByFilters, rolesIds)
+            }
+            const _by_team_id = belongedInfo.belonged_project.by_team.id;
+            const team = await strapi.entityService.findOne('api::team.team', _by_team_id);
+            // console.log('team', team)
+            if(team){
+                const team_mode = team.config?.mode || 'toMany';
+
+                if(team_mode === 'toOne'){
+                    kanban.columns = kanban.columns.map(column => ({
+                        ...column,
+                        cards: column.cards?.length > 0 ? column.cards.filter(card => canShow(card.card_members, card.member_roles)) : []
+                    }))
+                }
+            }
+        }
 
         return kanban
     },

@@ -1006,7 +1006,7 @@ module.exports = {
                 ]
             },
             {
-                "role": "marster",
+                "role": "master",
                 "ACL": [
                     {
                         "collection": "card",
@@ -1251,8 +1251,8 @@ module.exports = {
                             }
                         ]
                     },
-                    role_schedule.marster,
-                    role_schedule_event.marster,
+                    role_schedule.master,
+                    role_schedule_event.master,
                 ]
             },
         ]
