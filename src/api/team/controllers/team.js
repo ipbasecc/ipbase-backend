@@ -168,7 +168,11 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 display_name: data.display_name,
                 members: member_ids,
                 member_roles: roles_ids,
-                publishedAt: new Date()
+                publishedAt: new Date(),
+                config:{
+                  mode: "toMany",
+                  disabled: []
+                }
             }
             if(data.mm_team){
                 params.mm_team = data.mm_team
@@ -233,6 +237,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             }
             if(data.team_logo){
                 params.team_logo = data.team_logo
+            }
+            if(data.config){
+                params.config = data.config
             }
             const populate = strapi.service('api::team.team').populate_template();
             const update = await strapi.entityService.update('api::team.team',team_id,{
