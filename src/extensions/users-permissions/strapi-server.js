@@ -10,7 +10,7 @@ module.exports = (plugin) => {
             ctx.throw(403, '请先登陆')
         }
         let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id,{
-            fields: ['id','username','email','self_tags','mm_profile'],
+            fields: ['id','username','email','self_tags','mm_profile', 'initialization', 'feature_key'],
             populate: {
                 todogroups: {
                     populate: {
@@ -349,6 +349,31 @@ module.exports = (plugin) => {
             return update.default_team
         }
     }
+    plugin.controllers.user.update = async (ctx) => {
+        const user_id = Number(ctx.state.user.id);
+        const { data } = ctx.request.body;
+        let target_id = Number(ctx.params.id);
+        // console.log('data',data);
+        if(!user_id) {
+          ctx.throw(403, '请先登陆')
+        }
+        if(target_id && target_id !== user_id) {
+          ctx.throw(403, '没有权限')
+        }
+        let params = {}
+        params.initialization = data?.initialization || false;
+        if(data?.feature_key){
+          params.feature_key = data.feature_key;
+        }
+        let user = await strapi.entityService.update('plugin::users-permissions.user',user_id,{
+            data: params,
+            fields: ['initialization','feature_key']
+        })
+        if(user) {
+        //   console.log('user',user);
+          return user
+        }
+    }
 
     const register = plugin.controllers.auth.register;
     const resetPassword = plugin.controllers.auth.resetPassword;
@@ -418,51 +443,51 @@ module.exports = (plugin) => {
     };
 
     plugin.routes['content-api'].routes.push(
-        {
-            method: 'GET',
-            path: '/user/me/init',
-            handler: 'user.init',
-            config: {
-                perfix: '',
-                policies: []
-            }
-        },
-        {
-            method: 'PUT',
-            path: '/user/me/todogroups',
-            handler: 'user.updateTodogroups',
-            config: {
-                perfix: '',
-                policies: []
-            }
-        },
-        {
-            method: 'POST',
-            path: '/user/me/avatar',
-            handler: 'user.updateAvatar',
-            config: {
-                perfix: '',
-                policies: []
-            }
-        },
-        {
-            method: 'POST',
-            path: '/user/me/config',
-            handler: 'user.modifyConfig',
-            config: {
-                perfix: '',
-                policies: []
-            }
-        },
-        {
-            method: 'PUT',
-            path: '/user/me/default_team',
-            handler: 'user.setDefaultTeam',
-            config: {
-                perfix: '',
-                policies: []
-            }
-        },
+      {
+          method: 'GET',
+          path: '/user/me/init',
+          handler: 'user.init',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'PUT',
+          path: '/user/me/todogroups',
+          handler: 'user.updateTodogroups',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/avatar',
+          handler: 'user.updateAvatar',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/config',
+          handler: 'user.modifyConfig',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'PUT',
+          path: '/user/me/default_team',
+          handler: 'user.setDefaultTeam',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
     )
 
     //...

@@ -47,6 +47,11 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                         }
                     }
                 },
+                todogroups: {
+                    populate: {
+                        todos: true
+                    }
+                },
                 card_members: {
                     populate: {
                         by_user: {
@@ -690,12 +695,12 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     // console.log('enables', enables)
                     if(_card.card_kanban && !enables.includes('card_kanban')){
                         delete _card.card_kanban;
-                    } else {
+                    } else if(_card.card_kanban?.columns?.length > 0){
                         _card.card_kanban = {
                             ..._card.card_kanban,
-                            columns: _card.card_kanban.columns.map(column => ({
+                            columns: _card.card_kanban.columns?.map(column => ({
                                 ...column,
-                                cards: column.cards.map(subCard => process_card(subCard))
+                                cards: column.cards?.map(subCard => process_card(subCard))
                             }))
                         }
                     }
@@ -891,40 +896,3 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         }
     }
 }));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
