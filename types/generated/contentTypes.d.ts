@@ -920,6 +920,8 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'oneToOne',
       'api::team.team'
     >;
+    initialization: Attribute.Boolean & Attribute.DefaultTo<false>;
+    feature_key: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -2378,9 +2380,10 @@ export interface ApiServerServer extends Schema.SingleType {
   attributes: {
     http_api_endpoint: Attribute.Text;
     ws_api_endpoint: Attribute.String;
-    version: Attribute.String;
     graphql_endpoint: Attribute.Text;
     ws_endpoint: Attribute.String;
+    version: Attribute.JSON;
+    feature: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

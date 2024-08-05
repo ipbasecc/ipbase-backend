@@ -320,7 +320,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 return card;
             }) : []
         }))
-        if(belongedInfo.belonged_project.by_team){
+        if(belongedInfo?.belonged_project?.by_team){
             // console.log('belongedInfo.belonged_project.by_team', belongedInfo.belonged_project.by_team)
             const canShow = (members, roles) => {
                 const membersInCard = members.filter(i => i.by_user.id === user_id && i.subject !== 'unconfirmed' && i.subject !== 'blocked')

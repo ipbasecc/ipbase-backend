@@ -18,14 +18,17 @@
     "ws_api_endpoint": {
       "type": "string"
     },
-    "version": {
-      "type": "string"
-    },
     "graphql_endpoint": {
       "type": "text"
     },
     "ws_endpoint": {
       "type": "string"
+    },
+    "version": {
+      "type": "json"
+    },
+    "feature": {
+      "type": "json"
     }
   }
 }

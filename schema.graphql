@@ -2737,10 +2737,11 @@ type ScheduleRelationResponseCollection {
 
 type Server {
   createdAt: DateTime
+  feature: JSON
   graphql_endpoint: String
   http_api_endpoint: String
   updatedAt: DateTime
-  version: String
+  version: JSON
   ws_api_endpoint: String
   ws_endpoint: String
 }
@@ -2762,20 +2763,22 @@ type ServerEntityResponseCollection {
 input ServerFiltersInput {
   and: [ServerFiltersInput]
   createdAt: DateTimeFilterInput
+  feature: JSONFilterInput
   graphql_endpoint: StringFilterInput
   http_api_endpoint: StringFilterInput
   not: ServerFiltersInput
   or: [ServerFiltersInput]
   updatedAt: DateTimeFilterInput
-  version: StringFilterInput
+  version: JSONFilterInput
   ws_api_endpoint: StringFilterInput
   ws_endpoint: StringFilterInput
 }
 
 input ServerInput {
+  feature: JSON
   graphql_endpoint: String
   http_api_endpoint: String
-  version: String
+  version: JSON
   ws_api_endpoint: String
   ws_endpoint: String
 }
@@ -3648,9 +3651,11 @@ type UsersPermissionsUser {
   executor_of_columns(filters: ColumnFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ColumnRelationResponseCollection
   executor_todo: TodoEntityResponse
   favorites(filters: FavoriteFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): FavoriteRelationResponseCollection
+  feature_key: String
   followed(filters: UsersPermissionsUserFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): UsersPermissionsUserRelationResponseCollection
   followed_cards(filters: CardFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): CardRelationResponseCollection
   follows(filters: UsersPermissionsUserFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): UsersPermissionsUserRelationResponseCollection
+  initialization: Boolean
   liked_element(filters: ElementFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ElementRelationResponseCollection
   liked_messages(filters: MessageFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): MessageRelationResponseCollection
   messages(filters: MessageFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): MessageRelationResponseCollection
@@ -3720,10 +3725,12 @@ input UsersPermissionsUserFiltersInput {
   executor_of_columns: ColumnFiltersInput
   executor_todo: TodoFiltersInput
   favorites: FavoriteFiltersInput
+  feature_key: StringFilterInput
   followed: UsersPermissionsUserFiltersInput
   followed_cards: CardFiltersInput
   follows: UsersPermissionsUserFiltersInput
   id: IDFilterInput
+  initialization: BooleanFilterInput
   liked_element: ElementFiltersInput
   liked_messages: MessageFiltersInput
   messages: MessageFiltersInput
@@ -3781,9 +3788,11 @@ input UsersPermissionsUserInput {
   executor_of_columns: [ID]
   executor_todo: ID
   favorites: [ID]
+  feature_key: String
   followed: [ID]
   followed_cards: [ID]
   follows: [ID]
+  initialization: Boolean
   liked_element: [ID]
   liked_messages: [ID]
   messages: [ID]

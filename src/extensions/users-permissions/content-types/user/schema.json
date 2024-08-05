@@ -318,6 +318,13 @@
       "relation": "oneToOne",
       "target": "api::team.team",
       "inversedBy": "default_by"
+    },
+    "initialization": {
+      "type": "boolean",
+      "default": false
+    },
+    "feature_key": {
+      "type": "string"
     }
   }
 }
