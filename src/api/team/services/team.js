@@ -141,8 +141,7 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
     },
     async getRole(...args) {
         const [ user_id, team_id, collection, field ] = args;
-        let auth = {
-        }
+        let auth = {}
         const team = await strapi.entityService.findOne('api::team.team',team_id,{
             populate: {
                 members: {

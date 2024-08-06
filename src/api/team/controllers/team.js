@@ -177,10 +177,11 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             if(data.mm_team){
                 params.mm_team = data.mm_team
             }
-            const team = await strapi.entityService.create('api::team.team',{
+            let team = await strapi.entityService.create('api::team.team',{
                 data: params
             })
             if(team) {
+                team.team_channels = []
                 if(data.mm_channels && data.mm_team){
                     for(const i of data.mm_channels) {
                         const params = {
@@ -194,7 +195,8 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                         if(i.name === 'off-topic' || i.display_name === 'off-topic'){
                           params.name = user?.config?.lang === 'zh-CN' ? '闲聊' : 'off-topic'
                         }
-                        await strapi.service('api::team.team').createChannel(user_id,team.id,params);
+                        const _channel = await strapi.service('api::team.team').createChannel(user_id,team.id,params)
+                        team.team_channels.push(_channel);
                     }
                 }
                 return team
@@ -525,14 +527,23 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
 
             isInvitor = team.invite_uris.map(i => i.invitor.id === user_id && i.invite_code).includes(invite_code);
             if(auth.unconfirmed) {
-                ctx.throw(204, '您已经接受了邀请，请等待团队管理员审核')
+                let Resps = {
+                    message: '您已经接受了邀请，请等待团队管理员审核'
+                }
+                return Resps
             }
             if(isInvitor && !isUnconfirmed) {
-                ctx.throw(204, '您是该邀请链接的创建者，可以直接进入团队，无需使用此链接')
+                let Resps = {
+                    message: '您是该邀请链接的创建者，可以直接进入团队，无需使用此链接'
+                }
+                return Resps
             }
 
             if(auth.isBlock){
-                ctx.throw(401, '您已被团队管理员屏蔽，如需申诉，请联系管理员')
+                let Resps = {
+                    message: '您已被团队管理员屏蔽，如需申诉，请联系管理员'
+                }
+                return Resps
             }
         }
         // console.log(project);

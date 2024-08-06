@@ -4,6 +4,59 @@ module.exports = (plugin) => {
     //...
 
     plugin.contentTypes.user = user;
+    const processMembers = (_team, user_id) => {
+      // 如果用户是 “外部成员”，只返回基础数据，删除敏感数据
+      const userMember = _team?.members?.find(i => i.by_user.id === user_id);
+      const roles_byMember = userMember.member_roles.map(i => i.id);
+      const roles_byTeam = _team.member_roles.map(i => i.id);
+      const userMember_byTeam = roles_byTeam.filter(i => roles_byMember.includes(i));
+      const userMemberRoles = _team.member_roles.filter(role => userMember_byTeam.includes(role.id));
+
+      const process_external_data = () => {
+        _team.members = [ userMember ];
+        delete _team.member_roles;
+        delete _team.team_channels;
+        _team.projects = _team.projects?.filter(i => i.project_members?.map(j => j.id).includes(userMember.id));
+        _team.projects = _team.projects.map(i => {
+            i.project_members = [ userMember ];
+            return i
+        })
+        _team.isExternal = true
+      }
+      const process_unconfirmed_data = () => {
+        return {
+          id: _team.id,
+          name: _team.name,
+          display_name: _team.display_name,
+          team_logo: _team.team_logo,
+          status: 'unconfirmed'
+        }
+      }
+      const process_blocked_data = () => {
+        return {
+          id: _team.id,
+          name: _team.name,
+          display_name: _team.display_name,
+          team_logo: _team.team_logo,
+          status: 'blocked'
+        }
+      }
+      if(userMemberRoles?.length > 0){
+          const _userRoles = userMemberRoles.map(i => i.subject);
+          if(_userRoles.includes('external')){
+            process_external_data();
+          }
+          if(_userRoles.includes('unconfirmed')){
+            _team = process_unconfirmed_data();
+          }
+          if(_userRoles.includes('blocked')){
+            _team = process_blocked_data();
+          }
+      } else if (userMemberRoles?.length === 0) {
+          process_external_data();
+      }
+      return _team
+    }
     plugin.controllers.user.init = async (ctx) => {
         const user_id = Number(ctx.state.user.id);
         if(!user_id) {
@@ -172,51 +225,7 @@ module.exports = (plugin) => {
             if(user.default_team){
                 // @ts-ignore
                 let _team = await strapi.service('api::team.team').filterByAuth(user.default_team, user_id);
-
-                // 如果用户是 “外部成员”，只返回基础数据，删除敏感数据
-                const userMember = _team?.members?.find(i => i.by_user.id === user_id);
-                // console.log('userMember',userMember)
-                const calcExternal = () => {
-                    let _is
-                    _team.projects.map((i) => {
-                        if(i.member_roles && i.project_members){
-                            const externalRole_of_project = i.member_roles.find(i => i.subject === 'external');
-                            // console.log('externalRole_of_project',externalRole_of_project)
-                            if(userMember.member_roles.map(i => i.id).includes(externalRole_of_project.id)){
-                                _is = true
-                            }
-                        }
-                    })
-                    return _is
-                }
-
-                const process_external_data = () => {
-                    _team.members = [ userMember ];
-                    delete _team.member_roles;
-                    delete _team.team_channels;
-                    // console.log('_filterProjects',userMember.id,_team.projects)
-                    const _filterProjects = _team.projects?.filter(i => i.project_members?.map(j => j.id).includes(userMember.id));
-                    if(_filterProjects?.length > 0){
-                        _team.projects = _filterProjects?.map(i => {
-                            i.project_members = [ userMember ];
-                            delete i.member_roles
-                            return i
-                        })
-                    } else {
-                        _team.projects = []
-                    }
-
-                }
-
-                const isExternal = calcExternal();
-                // console.log('isExternal',isExternal)
-                if(isExternal){
-                    process_external_data();
-                    _team.isExternal = true
-                }
-
-                // @ts-ignore
-                user.default_team = _team
+                user.default_team = processMembers(_team, user_id);
             }
             return user
         }
@@ -317,34 +326,7 @@ module.exports = (plugin) => {
                 // @ts-ignore
                 let _team = await strapi.service('api::team.team').filterByAuth(update.default_team, user_id);
 
-                // 如果用户是 “外部成员”，只返回基础数据，删除敏感数据
-                const userMember = _team?.members?.find(i => i.by_user.id === user_id);
-                const roles_byMember = userMember.member_roles.map(i => i.id);
-                const roles_byTeam = _team.member_roles.map(i => i.id);
-                const userMember_byTeam = roles_byTeam.filter(i => roles_byMember.includes(i));
-                const userMemberRoles = _team.member_roles.filter(role => userMember_byTeam.includes(role.id));
-
-                const process_external_data = () => {
-                    _team.members = [ userMember ];
-                    delete _team.member_roles;
-                    delete _team.team_channels;
-                    _team.projects = _team.projects?.filter(i => i.project_members?.map(j => j.id).includes(userMember.id));
-                    _team.projects = _team.projects.map(i => {
-                        i.project_members = [ userMember ];
-                        return i
-                    })
-                    _team.isExternal = true
-                }
-                if(userMemberRoles?.length > 0){
-                    const _userRoles = userMemberRoles.map(i => i.subject);
-                    if(_userRoles.includes('external')){
-                        process_external_data();
-                    }
-                } else if (userMemberRoles?.length === 0) {
-                    process_external_data();
-                }
-                // @ts-ignore
-                update.default_team = _team
+                update.default_team = processMembers(_team, user_id);
             }
             return update.default_team
         }
