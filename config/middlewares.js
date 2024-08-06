@@ -1,4 +1,4 @@
-module.exports = [
+module.exports = ({ env }) => [
     'strapi::errors',
     {
       name: 'strapi::security',
@@ -8,13 +8,14 @@ module.exports = [
             directives: {
                 'connect-src': ["'self'", 'https:'],
                 'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'",'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','*.yihu.chat','yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro'],
-                'img-src': ["'self'", "'unsafe-eval'", 'data:', 'blob:', 'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','yihu.chat','*.yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro'],
+                'img-src': ["'self'", "'unsafe-eval'", 'data:', 'blob:', 'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','yihu.chat','*.yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro', env("CF_PUBLIC_ACCESS_URL") ? env("CF_PUBLIC_ACCESS_URL").replace(/^https?:\/\//, "") : "",],
                 "frame-src": [ "self", "sandbox.embed.apollographql.com" ],
                 'media-src': [
                     "'self'",
                     'data:',
                     'blob:',
-                    'market-assets.strapi.io'
+                    'market-assets.strapi.io',
+                    env("CF_PUBLIC_ACCESS_URL") ? env("CF_PUBLIC_ACCESS_URL").replace(/^https?:\/\//, "") : "",
                 ],
                 upgradeInsecureRequests: null,
               },

@@ -33,6 +33,7 @@
     "strapi-plugin-rest-cache": "^4.2.9",
     "strapi-provider-email-azure": "^1.0.3",
     "strapi-provider-rest-cache-redis": "^4.2.9",
+    "strapi-provider-cloudflare-r2": "^0.3.0",
     "strapi-provider-upload-oss": "^0.1.7",
     "styled-components": "^5.2.1",
     "subscriptions-transport-ws": "^0.11.0",
