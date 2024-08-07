@@ -2747,6 +2747,7 @@ export interface ApiTodoTodo extends Schema.CollectionType {
       'api::member.member'
     >;
     props: Attribute.JSON;
+    fingerprint: Attribute.Text;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<'api::todo.todo', 'oneToOne', 'admin::user'> &

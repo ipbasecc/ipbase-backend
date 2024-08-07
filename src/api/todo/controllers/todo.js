@@ -49,6 +49,9 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
                     todogroup_id = feedback.id;
                     const filterSharecode = feedback.share_codes.find(i => i.code === code && i.creator.id === Number(by));
                     if(filterSharecode){
+                        if(data.fingerprint){
+                          params.fingerprint = data.fingerprint
+                        }
                         res = await create_todoFn();
                         strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
                     } else {
@@ -71,7 +74,7 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         let collection;
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-            
+
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
@@ -177,10 +180,11 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         const todo_id = Number(id);
         const { data, props } = ctx.request.body;
 
+        // console.log('fingerprint',props.fingerprint)
         if(!ctx.state.user) {
             ctx.throw(401, '访问未授权')
         }
-        
+
         // 如果有收到更新mm_thread的请求，直接从Mattermost读取当前卡片的thread并直接更新
         // 此处无须返回，前端Mattermost的thread并更新UI，这里只是更新Strapi中的数据，方便下次读取
         if(data?.mm_thread){
@@ -199,14 +203,17 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
             }
         }
 
-        let auth;
+        const todo = await strapi.entityService.findOne('api::todo.todo', id);
+        let auth = props?.fingerprint === todo?.fingerprint;
+        let isFeedbackOwner = auth;
+        // console.log('auth',auth)
         let belonged_user;
         let collection;
         let members;
         let fields_permission = [];
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-            
+
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
@@ -223,7 +230,7 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
             auth = true
             belonged_user = true
         }
-        
+
         if(!auth){
             let card_id;
             if(props?.card_id){
@@ -277,11 +284,11 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
                 }
             }
         }
-        
-        
+
+
         if(auth) {
-            const params = strapi.service('api::todo.todo').process_updateTodo_params(data,fields_permission,belonged_user)
-            
+            const params = strapi.service('api::todo.todo').process_updateTodo_params(data,fields_permission,belonged_user,isFeedbackOwner)
+
             let update_todo = await strapi.entityService.update('api::todo.todo', todo_id, {
                 data: params,
                 populate: {
@@ -303,19 +310,20 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         const todogroup_id = Number(ctx.query.group_id);
         let project_id = Number(ctx.query.project_id);
         const card_id = Number(ctx.query.card_id);
+        const fingerprint = Number(ctx.query.fingerprint);
 
         if(!ctx.state.user || !ctx.state.user.id) {
             ctx.throw(401, '访问未授权')
         }
-        
 
-        let auth;
+        const todo = await strapi.entityService.findOne('api::todo.todo', id)
+        let auth = todo?.fingerprint == fingerprint;
         let collection;
         let members;
         let card
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-            
+
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
@@ -324,7 +332,7 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
             auth = remove
         }
 
-        if(card_id){
+        if(card_id && !auth){
             card = await strapi.service('api::card.card').find_cardByID(card_id);
         }
         const getAuthByCard = async (_card) => {
@@ -354,12 +362,12 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
                 }
             }
         }
-        if(card){
+        if(card && !auth){
             await getAuthByCard(card)
         }
         if(!auth){
             let todogroup = await strapi.service('api::todo.todo').find_belonged_todogroup(id);
-            console.log('todogroup', todogroup)
+            // console.log('todogroup', todogroup)
             if(!todogroup){
                 auth = false
             } else {

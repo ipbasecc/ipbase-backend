@@ -3223,6 +3223,7 @@ type Todo {
   createdAt: DateTime
   creator: UsersPermissionsUserEntityResponse
   executor: UsersPermissionsUserEntityResponse
+  fingerprint: String
   importance: Float
   mm_thread: JSON
   props: JSON
@@ -3255,6 +3256,7 @@ input TodoFiltersInput {
   createdAt: DateTimeFilterInput
   creator: UsersPermissionsUserFiltersInput
   executor: UsersPermissionsUserFiltersInput
+  fingerprint: StringFilterInput
   id: IDFilterInput
   importance: FloatFilterInput
   mm_thread: JSONFilterInput
@@ -3275,6 +3277,7 @@ input TodoInput {
   content: String
   creator: ID
   executor: ID
+  fingerprint: String
   importance: Float
   mm_thread: JSON
   props: JSON

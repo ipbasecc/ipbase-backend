@@ -74,6 +74,9 @@
     },
     "props": {
       "type": "json"
+    },
+    "fingerprint": {
+      "type": "text"
     }
   }
 }
