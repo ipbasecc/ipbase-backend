@@ -26,7 +26,7 @@ module.exports = createCoreService('api::todo.todo',({strapi}) => ({
     process_updateTodo_params(...args){
         const [data,fields_permission,belonged_user,isFeedbackOwner] = args;
         const ctx = strapi.requestContext.get();
-        const user_id = Number(ctx.state.user.id);
+        const user_id = Number(ctx.state.user?.id);
 
         let params = {};
         if(data.content && (isFeedbackOwner || (fields_permission.includes('content') || belonged_user))) {
@@ -36,7 +36,7 @@ module.exports = createCoreService('api::todo.todo',({strapi}) => ({
         }
         if(data.hasOwnProperty('status') && (isFeedbackOwner ||  (fields_permission.includes('status') || belonged_user))) {
             params.status = data.status
-            if(data.status){
+            if(data.status && user_id){
                 params.completed_by = user_id
             } else {
                 params.completed_by = null

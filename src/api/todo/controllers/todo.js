@@ -175,13 +175,13 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
     },
     async update(ctx) {
         await this.validateQuery(ctx);
-        const user_id = Number(ctx.state.user.id);
+        const user_id = Number(ctx.state.user?.id);
         const { id } = ctx.params;
         const todo_id = Number(id);
         const { data, props } = ctx.request.body;
 
         // console.log('fingerprint',props.fingerprint)
-        if(!ctx.state.user) {
+        if(!props.fingerprint && !ctx.state.user) {
             ctx.throw(401, '访问未授权')
         }
 
@@ -305,14 +305,14 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
     },
     async delete(ctx) {
         await this.validateQuery(ctx);
-        const user_id = Number(ctx.state.user.id);
+        const user_id = Number(ctx.state.user?.id);
         const { id } = ctx.params;
         const todogroup_id = Number(ctx.query.group_id);
         let project_id = Number(ctx.query.project_id);
         const card_id = Number(ctx.query.card_id);
-        const fingerprint = Number(ctx.query.fingerprint);
+        const fingerprint = ctx.query.fingerprint;
 
-        if(!ctx.state.user || !ctx.state.user.id) {
+        if(!fingerprint && !ctx.state.user?.id) {
             ctx.throw(401, '访问未授权')
         }
 
