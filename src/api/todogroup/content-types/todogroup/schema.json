@@ -53,6 +53,15 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "todogroup",
+        "note",
+        "feedback"
+      ],
+      "default": "todogroup"
     }
   }
 }

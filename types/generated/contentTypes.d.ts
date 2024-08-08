@@ -2803,6 +2803,8 @@ export interface ApiTodogroupTodogroup extends Schema.CollectionType {
       'oneToOne',
       'plugin::users-permissions.user'
     >;
+    type: Attribute.Enumeration<['todogroup', 'note', 'feedback']> &
+      Attribute.DefaultTo<'todogroup'>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

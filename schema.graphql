@@ -1271,6 +1271,12 @@ enum ENUM_STORAGE_TYPE {
   local
 }
 
+enum ENUM_TODOGROUP_TYPE {
+  feedback
+  note
+  todogroup
+}
+
 enum ENUM_TODO_TYPE {
   node
   todo
@@ -3300,6 +3306,7 @@ type Todogroup {
   name: String!
   project: ProjectEntityResponse
   todos(filters: TodoFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): TodoRelationResponseCollection
+  type: ENUM_TODOGROUP_TYPE
   updatedAt: DateTime
   user: UsersPermissionsUserEntityResponse
 }
@@ -3331,6 +3338,7 @@ input TodogroupFiltersInput {
   or: [TodogroupFiltersInput]
   project: ProjectFiltersInput
   todos: TodoFiltersInput
+  type: StringFilterInput
   updatedAt: DateTimeFilterInput
   user: UsersPermissionsUserFiltersInput
 }
@@ -3343,6 +3351,7 @@ input TodogroupInput {
   name: String
   project: ID
   todos: [ID]
+  type: ENUM_TODOGROUP_TYPE
   user: ID
 }
 
