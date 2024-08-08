@@ -216,7 +216,7 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         const { data, props } = ctx.request.body;
 
         // console.log('fingerprint',props.fingerprint)
-        if(!props.fingerprint && !ctx.state.user) {
+        if(!props?.fingerprint && !ctx.state.user) {
             ctx.throw(401, '访问未授权')
         }
 
