@@ -95,7 +95,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
         } else if(share_code){
             let _schedule = await get_schedule(id);
             if(_schedule?.disable_share){
-                ctx.throw(400, '当前内容共享已被禁止')
+                ctx.throw(400, '当前共享已被禁止')
             }
 
             const _share_codes = _schedule?.share_codes;
@@ -125,7 +125,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                     ctx.throw(400, '该共享码已被禁用')
                 } else if(_share_code.max_count < 1){
                     ctx.throw(400, '该共享码已超过使用次数')
-                } else if(_share_code.up_time < new Date ()){
+                } else if(_share_code.up_time !== null && _share_code.up_time < new Date ()){
                     ctx.throw(400, '该共享码已超过使用期限')
                 } else {
                     await maxCount_donw(_schedule, _share_code)
