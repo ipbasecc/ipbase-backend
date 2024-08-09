@@ -94,6 +94,9 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
             }
         } else if(share_code){
             let _schedule = await get_schedule(id);
+            if(_schedule?.disable_share){
+                ctx.throw(400, '当前内容共享已被禁止')
+            }
 
             const _share_codes = _schedule?.share_codes;
             console.log('_share_codes', _share_codes)
