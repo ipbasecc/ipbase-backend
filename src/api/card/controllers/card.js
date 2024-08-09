@@ -845,7 +845,9 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 }
             }
         })
-        if(card?.share_codes){
+        if(card?.disable_share){
+          ctx.throw(400, '当前内容共享已被禁止')
+        } else if(card?.share_codes){
             isValid = check_sharecode(card?.share_codes);
             const find_belongedCard_byStorageID = async (_storage_id) => {
                 const _storage = await strapi.entityService.findOne('api::storage.storage',_storage_id,{
