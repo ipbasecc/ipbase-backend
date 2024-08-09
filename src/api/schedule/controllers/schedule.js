@@ -17,7 +17,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
         if((!share_code || !share_by) && (share_code || share_by)){
             ctx.throw(404, '无效的共享连接')
         }
-        
+
         const get_schedule = async (_id) => {
             const res = await strapi.entityService.findOne('api::schedule.schedule',_id,{
                 populate: {
@@ -94,7 +94,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
             }
         } else if(share_code){
             let _schedule = await get_schedule(id);
-            
+
             const _share_codes = _schedule?.share_codes;
             console.log('_share_codes', _share_codes)
             let _share_code
@@ -193,7 +193,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
             const res = await clacAuth_by_project(project_id);
             auth = res
         }
-        
+
         if(by_info.by === 'card' && by_info.card_id){
             params.data.by_card = by_info.card_id;
             const card_id = by_info.card_id;
@@ -240,10 +240,10 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                         }
                     }
                     if(by_info.project_id){
-                        mm_params.props.data.strapi.project_id = by_info.project_id
+                        mm_params.props.strapi.data.project_id = by_info.project_id
                     }
                     if(by_info.card_id){
-                        mm_params.props.data.strapi.card_id = by_info.card_id
+                        mm_params.props.strapi.data.card_id = by_info.card_id
                     }
                     const mmMsg = await mmapi.createPost(mm_params);
                     // console.log('create_todo',create_todo)
@@ -356,7 +356,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                     }
                 }
             })
-            
+
             if(_update){
                 if(!shareAuth && data.data?.share_code){
                     _update.attachInfo = '您无权分享规划'
