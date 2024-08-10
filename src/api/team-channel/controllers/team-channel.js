@@ -226,7 +226,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     if(_mm_channel.data){
                         params.mm_channel = _mm_channel.data
                     }
-                    if(data.type){
+                    if(data.type !== channel.type){
                         const _privacy = {
                           "privacy": data.type
                         }

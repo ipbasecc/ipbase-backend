@@ -143,11 +143,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         if(!user_id){
             ctx.throw(400, '请先登陆')
         } else {
-            user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id,{
-              populate: {
-                config: true
-              }
-            });
+            user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
                 ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
@@ -177,7 +173,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             if(data.mm_team){
                 params.mm_team = data.mm_team
             }
-            let team = await strapi.entityService.create('api::team.team',{
+            const team = await strapi.entityService.create('api::team.team',{
                 data: params
             })
             if(team) {
@@ -240,6 +236,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             if(data.team_logo){
                 params.team_logo = data.team_logo
             }
+            if(data.introduce){
+                params.introduce = data.introduce
+            }
             if(data.config){
                 params.config = data.config
             }
@@ -248,9 +247,6 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 data: params,
                 populate: populate
             })
-            if(data.introduce){
-                params.introduce = data.introduce
-            }
             if(update){
                 return update
             }

@@ -53,7 +53,7 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
         const { roleBase } = require('./roleBase.js');
         try {
           const role_base = await roleBase();
-          
+
           const roleBaseResults = await Promise.allSettled(role_base?.map(async (i) => {
             const res = await strapi.entityService.create('api::member-role.member-role', {
               data: {
@@ -63,7 +63,7 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
             });
             return res;
           }));
-    
+
           const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled');
           // @ts-ignore
           const role_admin = successfulResults.find((result) => result.value.subject === 'admin');
@@ -197,5 +197,14 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
         if(channel){
             return channel
         }
+    },
+    // 此方法只是为了触发前端同步更新频道变化，不要在此执行复杂逻辑
+    async tickWsSyncByChannle(...args) {
+        const [ channle ] = args;
+        const mmapi = strapi.plugin('mattermost').service('mmapi');
+        const _mm_params = {
+            display_name: channle.name
+        }
+        return await mmapi.PathChannel(channle.mm_channel?.id, _mm_params);
     }
 }));
