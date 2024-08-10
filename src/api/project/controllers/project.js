@@ -271,8 +271,8 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 _mm_channel = await strapi.service('api::team-channel.team-channel').tickWsSyncByChannle(update);
             }
             let response = strapi.service('api::project.project').process_response(update,__ACL);
-            if(_mm_channel){
-                response.mm_channel = _mm_channel
+            if(_mm_channel?.data){
+              response.mm_channel = _mm_channel.data
             }
 
             return response
