@@ -56,13 +56,8 @@ module.exports = (plugin) => {
           process_external_data();
       }
       return _team
-    }
-    plugin.controllers.user.init = async (ctx) => {
-        const user_id = Number(ctx.state.user.id);
-        if(!user_id) {
-            ctx.throw(403, '请先登陆')
-        }
-        let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id,{
+    };
+    const responseUser = {
             fields: ['id','username','email','self_tags','mm_profile', 'initialization', 'feature_key'],
             populate: {
                 todogroups: {
@@ -99,6 +94,8 @@ module.exports = (plugin) => {
                         cover: {
                             fields: ['ext','url']
                         },
+                        workingday: true,
+                        post: true
                     }
                 },
                 storages: {
@@ -219,15 +216,24 @@ module.exports = (plugin) => {
                     }
                 }
             }
-        })
-        if(user) {
+        };
+    const processUserdata = async (_user, _user_id) => {
+        // @ts-ignore
+        if(_user.default_team){
             // @ts-ignore
-            if(user.default_team){
-                // @ts-ignore
-                let _team = await strapi.service('api::team.team').filterByAuth(user.default_team, user_id);
-                user.default_team = processMembers(_team, user_id);
-            }
-            return user
+            let _team = await strapi.service('api::team.team').filterByAuth(_user.default_team, _user_id);
+            _user.default_team = processMembers(_team, _user_id);
+        }
+        return _user
+    }
+    plugin.controllers.user.init = async (ctx) => {
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id) {
+            ctx.throw(403, '请先登陆')
+        }
+        let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, responseUser);
+        if(user) {
+            return await processUserdata(user, user_id)
         }
     }
     plugin.controllers.user.updateTodogroups = async (ctx) => {
@@ -334,26 +340,35 @@ module.exports = (plugin) => {
     plugin.controllers.user.update = async (ctx) => {
         const user_id = Number(ctx.state.user.id);
         const { data } = ctx.request.body;
+        if(!data){
+            return ''
+        }
         let target_id = Number(ctx.params.id);
-        // console.log('data',data);
+        // console.log('target_id',target_id, 'user_id', user_id, '===', target_id === user_id);
         if(!user_id) {
           ctx.throw(403, '请先登陆')
         }
         if(target_id && target_id !== user_id) {
           ctx.throw(403, '没有权限')
         }
-        let params = {}
-        params.initialization = data?.initialization || false;
-        if(data?.feature_key){
+        let params = {};
+        const _has = (val) => {
+            console.log('data',data);
+            return data.hasOwnProperty(val)
+        }
+        if(_has('initialization')){
+            params.initialization = data?.initialization
+        }
+        if(_has('feature_key')){
           params.feature_key = data.feature_key;
         }
         let user = await strapi.entityService.update('plugin::users-permissions.user',user_id,{
             data: params,
-            fields: ['initialization','feature_key']
+            ...responseUser
         })
         if(user) {
         //   console.log('user',user);
-          return user
+          return await processUserdata(user, user_id)
         }
     }
 
