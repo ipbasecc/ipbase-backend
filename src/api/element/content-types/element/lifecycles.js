@@ -8,28 +8,19 @@ module.exports = {
         // 从全局获取 ctx
         const ctx = strapi.requestContext.get();
         const user_id = ctx.state.user.id
-  
-        const element = await strapi.service('api::element.element').findOne(element_id,{ populate: '*' });
-        const element_author = element.author || null;
-        if(!element.post) {
-            await strapi.entityService.create('api::post.post', {
-                data: {
-                    title: `element${element.id}'s Message Board`,
-                    element: element.id,
-                    publishedAt: Date.now()
-                },
-              });
-        }
 
-        await strapi.service('api::element.element').update(
-            element_id,
-            {
-                data: {
-                    creator: user_id, // 指定创建者
-                    author: element_author || user_id // 如果指定了作者，那么使用指定的作者，否则，指定作者为创建者
-                }
+        await strapi.entityService.create('api::post.post', {
+            data: {
+                title: `element${element_id}'s Message Board`,
+                element: element_id,
+                publishedAt: Date.now()
+            },
+          });
+        await strapi.service('api::element.element').update(element_id, {
+            data: {
+                creator: user_id, // 指定创建者
             }
-        );
+        });
     },
     async beforeUpdate(event) {
         const element_id = event.params.where.id;

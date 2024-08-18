@@ -11,10 +11,10 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     async initRole(...args) {
       const [user_id,member_byCurUser] = args;
       const { roleBase } = require('./roleBase.js');
-
+  
       try {
         const role_base = await roleBase();
-
+        
         const roleBaseResults = await Promise.allSettled(role_base?.map(async (i) => {
           const res = await strapi.entityService.create('api::member-role.member-role', {
             data: {
@@ -24,10 +24,10 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
           });
           return res;
         }));
-
+  
         const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled');
         const role_creator = successfulResults.find((result) => result.value.subject === 'creator');
-
+  
         // console.log('successfulResults',successfulResults);
         if (role_creator) {
           const creator = await strapi.entityService.update('api::member-role.member-role', role_creator.value?.id,{
@@ -43,7 +43,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
             return data;
           }
         }
-
+  
         // throw new Error('Initialization failed.');
       } catch (error) {
         console.error('Error during initialization:', error);
@@ -488,7 +488,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 connect: [Number(data.data?.new_follow_user_id)]
             }
         }
-
+        
         if(data.data?.remove_follow_user_id && Number(data.data?.remove_follow_user_id) === user_id) {
             params.followed_bies = {
                 disconnect: [Number(data.data?.remove_follow_user_id)]
@@ -667,7 +667,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         } else if (data.role && !fields_permission.includes('manageRole')) {
             ctx.throw(401, '您无权修改卡片角色权限')
         }
-
+        
         if(data.data?.share_code && fields_permission.includes('share')) {
             // 前端传来的
             let share_code = data.data?.share_code
@@ -1077,4 +1077,4 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     }
   })
 );
-
+  

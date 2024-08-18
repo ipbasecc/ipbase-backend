@@ -15,7 +15,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         let channel_id = Number(ctx.params.id);
-
+        
         let user
         if(!user_id) {
             ctx.throw(401, '您无权访问该数据')
@@ -60,7 +60,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             teamAuth  = await strapi.service('api::team.team').getRole(user_id,channel?.team?.id,'channel');
             auth = teamAuth.read
         }
-
+        
         if(auth){
             const populate = strapi.service('api::team-channel.team-channel').populate_template();
             const channel = await strapi.entityService.findOne('api::team-channel.team-channel',channel_id,{
@@ -212,7 +212,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             }
             if(data.name){
                 params.name = data.name;
-
+                
                 if(channel.mm_channel){
                     const _params = {
                         channel_id: channel.mm_channel.id,
@@ -247,7 +247,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         let channel_id = Number(ctx.params.id);
-
+        
         let user
         if(!user_id) {
             ctx.throw(401, '您无权访问该数据')
@@ -282,13 +282,13 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         let { channel_id } = ctx.params;
         channel_id = Number(channel_id);
         const data = ctx.request.body
-
+        
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
         let auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel','invite_uris');
         if(auth.isBlock){
             ctx.throw(401, '您无权邀请成员')
         }
-
+          
         if(auth.field) {
             const makeid = (length) => {
                 let result = '';
@@ -424,7 +424,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                 return res
             }
         }
-
+        
     },
     async acceptInvite(ctx) {
         await this.validateQuery(ctx);
@@ -567,7 +567,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                 // 频道更新完毕以后，加入到Mattermost channel
                 if(update_channel) {
                     // mm_profile
-
+                    
                     if(joined_user?.mm_profile && mm_channel){
                         let joinTeam_params = {
                             "team_id": mm_team.id,
@@ -644,7 +644,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             // @ts-ignore
             if(!auth.unconfirmed){
                 await mmapi.RemoveUserFromChannel(mm_channel.id,mm_user_id);
-            }
+            }  
             const leave = await strapi.entityService.update('api::team-channel.team-channel',channel_id, {
                 data: {
                     members: {
@@ -656,7 +656,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                 response.leave = {
                     removedUser: user_id_by_willRemove
                 }
-            }
+            }        
             return response
 
         } else {
@@ -689,7 +689,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
         if(channel){
             auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel','manageMember');
-
+            
             if(auth.isBlock){
                 auth = false
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
@@ -699,7 +699,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             } else if(auth.unconfirmed){
                 auth = false
                 return '您无权执行此操作'
-            }
+            }            
         }
 
         if(auth?.field) {
@@ -707,7 +707,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             const member_id = Number(body.member_id);
             // 如果用户在team中是未确认状态，那么在频道中将其设置为其它角色时，同时将其在team中的角色设置为“成员”
             const team = await strapi.service('api::team.team').findTeamByID(channel.team?.id);
-
+            
             // *****
             // *****
             // *****
@@ -721,14 +721,14 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             // *****
             // *****
             // *****
-
+            
             const userMember = channel.members.find(i => i.id === member_id);
             const all_userRoles = userMember.member_roles.map(i => i.id);
             // console.log('all_userRoles',all_userRoles);
             const all_channelRoles = channel.member_roles.map(i => i.id);
             // console.log('all_projectRoles',all_projectRoles);
             const role_notBelongChannel = all_userRoles.filter(i => !all_channelRoles.includes(i));
-
+            
             const isUnconfirmedInTeam = team.members.some(i => i.by_user.id === user_id && i.member_roles.some(j => j.subject === 'unconfirmed'));
             // 频道角色不存在“待确认”状态，因此不需要判断新设角色是不是“待确认”
             if(isUnconfirmedInTeam){

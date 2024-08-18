@@ -1,5 +1,5 @@
 module.exports = {
-    roleBase: async () => {
+    roleBase: async () => { 
         let role = [
             {
                 "role": "creator",
@@ -4690,6 +4690,6 @@ module.exports = {
                 ]
             },
         ]
-        return role;
-    },
+        return role; 
+    }, 
 };

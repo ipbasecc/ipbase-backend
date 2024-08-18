@@ -1333,6 +1333,11 @@ export interface ApiChannelChannel extends Schema.CollectionType {
       'plugin::users-permissions.user'
     >;
     navigation: Attribute.JSON;
+    elements: Attribute.Relation<
+      'api::channel.channel',
+      'oneToMany',
+      'api::element.element'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1542,17 +1547,22 @@ export interface ApiElementElement extends Schema.CollectionType {
       'manyToMany',
       'plugin::users-permissions.user'
     >;
-    creator: Attribute.Relation<
-      'api::element.element',
-      'manyToOne',
-      'plugin::users-permissions.user'
-    >;
     makers: Attribute.Component<'user.creator', true>;
     is_opus: Attribute.Boolean & Attribute.DefaultTo<false>;
     attachedBy_message: Attribute.Relation<
       'api::element.element',
       'manyToOne',
       'api::message.message'
+    >;
+    channel: Attribute.Relation<
+      'api::element.element',
+      'manyToOne',
+      'api::channel.channel'
+    >;
+    creator: Attribute.Relation<
+      'api::element.element',
+      'manyToOne',
+      'plugin::users-permissions.user'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;

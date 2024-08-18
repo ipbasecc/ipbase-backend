@@ -3,9 +3,11 @@ module.exports = {
     // 只有超级管理员或者message sender才可以修改和删除message
   
     async beforeUpdate(event) {
-        const message_id = event.params.where.id;
+        const { params, state } = event
+        const message_id = params.where.id;
 
         // 从全局获取 ctx
+        // const ctx = strapi.requestContext.get();
         const ctx = strapi.requestContext.get();
         const user_id = ctx.state.user.id;
         const user_role = ctx.state.user.role.id;
@@ -18,6 +20,7 @@ module.exports = {
             message_sender && message_sender.id == user_id
             ? true : false
 
+        // console.log('can_update', can_update)
         if(!can_update) {
             throw new Error('只有超级管理员、作者可以修改当前内容');
             // ctx.send('只有超级管理员、作者可以修改当前内容')

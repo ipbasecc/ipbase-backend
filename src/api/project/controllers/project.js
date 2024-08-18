@@ -8,7 +8,7 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 
 // 结构优化功能、待确定
-// const { getPermission } = require ('../../../services/getPermission.js')
+// const { getPermission } = require ('../../../services/getPermission.js') 
 
 module.exports = createCoreController('api::project.project',({strapi}) => ({
     async find(ctx) {
@@ -106,7 +106,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let fields_permission = []
         const project = await strapi.service('api::project.project').find_projectByID(proj_id);
         if(project){
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names, ACL
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             auth = read
@@ -115,7 +115,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
             let authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'project');
             fields_permission = [...fields_permission, ...authed_fields];
-
+            
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             } else if(project?.publishedAt == null) {
@@ -153,7 +153,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         if(project?.type === 'O') {
             return process_schedule_share(project)
         }
-
+        
         if(auth && __ACL){
             // console.log('ACL',__ACL);
             const response = strapi.service('api::project.project').process_response(project,__ACL);
@@ -183,7 +183,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let __ACL
         const project = await strapi.service('api::project.project').find_projectByID(id);
         if(project){
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names, ACL
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             auth = modify
@@ -203,7 +203,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             if(data.boards){
                 const project_boards_ids = project.boards.map(i => Number(i.id));
                 const number_it = data.boards.map(i => Number(i));
-
+                
                 if(arraysEqual(project_boards_ids,number_it)){
                     let authed_fields_of_board = strapi.service('api::project.project').clac_authed_fields(ACL,'board');
                     orderBoards = authed_fields_of_board.includes('order')
@@ -216,7 +216,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             if(data.schedules){
                 const project_schedules_ids = project.schedules.map(i => Number(i.id));
                 const number_it = data.schedules.map(i => Number(i));
-
+                
                 if(arraysEqual(project_schedules_ids,number_it)){
                     let authed_fields_of_schedule = strapi.service('api::project.project').clac_authed_fields(ACL,'schedule');
                     orderSchedules = authed_fields_of_schedule.includes('order')
@@ -272,7 +272,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             }
             let response = strapi.service('api::project.project').process_response(update,__ACL);
             if(_mm_channel?.data){
-              response.mm_channel = _mm_channel.data
+                response.mm_channel = _mm_channel.data
             }
 
             return response
@@ -286,7 +286,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         const { preferenceBase } = require ('./preference_template.js');
         const user_id = Number(ctx.state.user.id);
         const data = ctx.request.body;
-
+        
         if(!user_id) {
             ctx.throw(401, '您无权执行此操作')
         } else {
@@ -315,7 +315,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 ctx.throw(401, '您没有新建项目的权限')
             }
         }
-
+        
         let now = new Date();
         let iso = now.toISOString();
         let new_overview;
@@ -448,7 +448,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let auth;
         const project = await strapi.service('api::project.project').find_projectByID(id);
         if(project){
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             auth = remove
@@ -515,7 +515,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let { project_id } = ctx.params;
         project_id = Number(project_id);
         const data = ctx.request.body
-
+        
         let auth
         const project = await strapi.service('api::project.project').find_projectByID(project_id);
         if(project){
@@ -531,8 +531,8 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 return '您无权邀请用户'
             }
         }
-
-
+        
+          
         if(auth) {
             function makeid (length) {
                 let result = '';
@@ -638,7 +638,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             }
 
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
 
@@ -668,7 +668,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 return res
             }
         }
-
+        
     },
     async acceptInvite(ctx) {
         await this.validateQuery(ctx);
@@ -705,7 +705,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             }
             // 获取当前用户的角色信息，用来判断是不是已经是项目成员了
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             // 判断当前邀请码是不是有效的
@@ -849,7 +849,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             if(!isUnconfirmed){
                 const cur_user_id = user_id
                 response.mm_remove = await strapi.service('api::project.project').removeUer_from_mmChannel(project,cur_user_id,user_id_by_willRemove,removeMember_id)
-            }
+            }  
             const leave = await strapi.entityService.update('api::project.project',project_id, {
                 data: {
                     project_members: {
@@ -861,7 +861,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 response.leave = {
                     removedUser: user_id_by_willRemove
                 }
-            }
+            }        
             return response
 
         } else {
@@ -892,11 +892,11 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let unconfirmed_roleId;
         let project = await strapi.service('api::project.project').find_projectByID(project_id);
         if(project){
-            const {
+            const { 
                 read, create, modify, remove, is_blocked, role_names, ACL
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             unconfirmed_roleId = project.member_roles?.find(i => i.subject === 'unconfirmed')?.id;
-
+            
             if(is_blocked){
                 auth = false
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
@@ -913,7 +913,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
             const projcet_members_roles_IDs = project.member_roles.map(i => i.id);
             const new_roles_isIN = body.new_roles.every(i => projcet_members_roles_IDs.includes(i));
-
+            
             auth = new_roles_isIN && strapi.service('api::project.project').calc_field_ACL(ACL,'project','manageRole');
         }
 
@@ -927,7 +927,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                     }
                 }
             })
-
+            
             // *****
             // *****
             // *****
@@ -1013,7 +1013,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             })
             if(update_member){
-
+                
                 const channel_id = project.mm_channel?.id;
                 const mmapi = strapi.plugin('mattermost').service('mmapi');
                 let params = {
@@ -1043,7 +1043,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         const user_id = Number(ctx.state.user.id);
         let mm_channel_id = ctx.params.mm_channel_id;
         // console.log(mm_channel_id);
-
+        
         // entityService 查询时需要ID，这里根据mm_channel_id来查询，因此使用 Query Engine API
         const project = await strapi.db.query('api::project.project').findOne({
             select: ['mm_channel_id','id'],

@@ -4069,7 +4069,513 @@ module.exports = {
                     },
                 ]
             },
+            {
+                "role": "blocked",
+                "ACL": [
+                    {
+                        "collection": "project",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "description",
+                                "modify": false
+                            },
+                            {
+                                "field": "type",
+                                "modify": false
+                            },
+                            {
+                                "field": "cover",
+                                "modify": false
+                            },
+                            {
+                                "field": "create_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "remove_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "default_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "invite_uris",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "private",
+                                "modify": false
+                            },
+                            {
+                                "field": "role",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageMember",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageRole",
+                                "modify": false
+                            },
+                            {
+                                "field": "preferences",
+                                "modify": false
+                            },
+                            {
+                                "field": "disable_share",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "overview",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "description",
+                                "modify": false
+                            },
+                            {
+                                "field": "media",
+                                "modify": false
+                            },
+                            {
+                                "field": "start",
+                                "modify": false
+                            },
+                            {
+                                "field": "end",
+                                "modify": false
+                            },
+                            {
+                                "field": "deadline",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "board",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "group",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "icon",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "kanban",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "description",
+                                "modify": false
+                            },
+                            {
+                                "field": "type",
+                                "modify": false
+                            },
+                            {
+                                "field": "icon",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "column",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "executor",
+                                "modify": false
+                            },
+                            {
+                                "field": "type",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "storage",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "files",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "sub_folders",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "card",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "type",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "executor",
+                                "modify": false
+                            },
+                            {
+                                "field": "followed_bies",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "create_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "remove_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "default_version",
+                                "modify": false
+                            },
+                            {
+                                "field": "importance",
+                                "modify": false
+                            },
+                            {
+                                "field": "urgency",
+                                "modify": false
+                            },
+                            {
+                                "field": "score",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "private",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            },
+                            {
+                                "field": "share",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "todogroups",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "todo",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "content",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "importance",
+                                "modify": false
+                            },
+                            {
+                                "field": "urgency",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "card_todogroups",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "card_todo",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "content",
+                                "modify": false
+                            },
+                            {
+                                "field": "status",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "importance",
+                                "modify": false
+                            },
+                            {
+                                "field": "urgency",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "card_storage",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "files",
+                                "modify": false
+                            },
+                            {
+                                "field": "color_marker",
+                                "modify": false
+                            },
+                            {
+                                "field": "sub_folders",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "document",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "creator",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    {
+                        "collection": "card_document",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "creator",
+                                "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
+                            }
+                        ]
+                    },
+                    role_schedule.unconfirmed,
+                    role_schedule_event.unconfirmed,
+                    {
+                        "collection": "card_schedule",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": role_schedule.unconfirmed.fields_permission
+                    },
+                    {
+                        "collection": "card_schedule_event",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": role_schedule_event.unconfirmed.fields_permission
+                    },
+                ]
+            },
         ]
-        return role;
-    },
+        return role; 
+    }, 
 };

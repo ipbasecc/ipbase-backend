@@ -348,7 +348,7 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         let project_id = Number(ctx.query.project_id);
         const card_id = Number(ctx.query.card_id);
         const fingerprint = ctx.fingerprint
-
+        
         if(!fingerprint && !ctx.state.user?.id) {
             ctx.throw(401, '访问未授权')
         }

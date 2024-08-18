@@ -117,7 +117,7 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
         let members;
         const belongedInfo = await strapi.service('api::document.document').find_belongedInfo_byDocumentID(document_id);
         if(belongedInfo){
-            console.log('document service belongedInfo', belongedInfo)
+            // console.log('document service belongedInfo', belongedInfo)
             if(belongedInfo.user_id === user_id){
                 auth = {
                     read: true,

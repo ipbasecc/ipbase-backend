@@ -194,7 +194,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 }
             }
         });
-
+        
         return {cards,total,page,per_page}
     },
     async create(ctx) {
@@ -209,7 +209,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if(!column_id) {
             ctx.throw(400, '需要提供看板分栏ID')
         }
-
+        
         let auth
         let belonged_project
         const belongedInfo = await strapi.service('api::column.column').find_belongedInfo_byColumnID(column_id);
@@ -251,7 +251,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             // console.log(member_byCurUser);
             let init_member_roles = await strapi.service('api::card.card').initRole(user_id,member_byCurUser);
             let member_roles = init_member_roles?.roles?.map(i => i.value.id);
-
+            
             // console.log('member_byCurUser',member_byCurUser)
             var now = new Date();
             var iso = now.toISOString();
@@ -399,7 +399,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     }
                 }
             };
-
+            
         } else {
             ctx.throw(401, '您无权在此处创建卡片')
         }
@@ -435,9 +435,9 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 });
             }
         }
-
+        
         const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
-
+        
         const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } =
             await strapi.service('api::card.card').clac_finalAuth_byCardID(card_id,user_id);
         auth = modify;
@@ -447,7 +447,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         orderTodo = strapi.service('api::project.project').calc_field_ACL(ACL,'todo','order');
 
         // console.log('orderTodogroup',orderTodogroup,'orderTodo',orderTodo);
-
+        
         function isUserId(obj) {
             // 判断 obj 是否是一个正整数
             if (Number.isInteger(obj) && obj > 0) {
@@ -466,13 +466,13 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if(data.remove_follow_user_id && !isUserId(Number(data.remove_follow_user_id))) {
             ctx.throw(500, '错误的用户ID')
         }
-
+        
         if(auth) {
             //  加入新成员
             if(data?.new_member?.user_id){
                 const _project = belongedInfo.belonged_project;
                 const member_byCurUser = await strapi.service('api::project.project').find_projectMemberByUID(data?.new_member?.user_id,_project?.id);
-
+                
                 if(!member_byCurUser){
                     ctx.throw(404, '没有找到对应的团队成员')
                 }
@@ -492,7 +492,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     }
                 })
             }
-
+            
             //  移除成员
             if(data?.remove_member){
                 const _targetMember = card.card_members.find(i => i.id === data?.remove_member);
@@ -558,7 +558,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         let card_id = Number(ctx.params.id);
-
+        
         if(!user_id) {
             ctx.throw(401, '您无权访问该数据')
         }
@@ -585,19 +585,19 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if(!card_id) {
             ctx.throw(400, '需要提供卡片ID')
         }
-
+        
         const { share_code, share_by, feedback } = ctx.request.query;
         if((!share_code || !share_by) && (share_code || share_by)){
             ctx.throw(404, '无效的共享连接')
         }
-
+        
         let _share_code
         const check_sharecode = (_share_codes) => {
             // console.log('_card', _card)
             if(_share_codes?.length > 0 && _share_codes.map(i => i.code).includes(share_code)){
                 _share_code = _share_codes.find(i => i.code === share_code);
             }
-
+            
             // console.log('_share_code', _share_code, share_code, share_by)
             if(_share_code){
                 // console.log('共享连接',_share_code.creator?.id, share_by)
@@ -620,12 +620,16 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             }
         }
         let isValid;
-
+        
         // console.log('share_code, share_by', share_code, share_by)
         let findBySharecode
         if(share_code && share_by){
             findBySharecode = true
             let card = await strapi.service('api::card.card').find_cardByID(card_id);
+            // console.log('card', card)
+            if(card?.disable_share){
+                ctx.throw(400, '当前内容共享已被禁止')
+            }
             // console.log('card.feedback', card.feedback)
             const findSharecodesByBelongedCardID = async (_card_id) => {
                 const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(_card_id);
@@ -644,27 +648,27 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             let _share_codes = card.share_codes;
             // 如果Card自身没有共享码，那么就递归查找其所属Card的共享码，要么找到为止，要么找到最上层不是子Card的Card
             if(!_share_codes || _share_codes.length === 0){
-                try {
+                try {  
                     await findSharecodesByBelongedCardID(card_id);
-                } catch (error) {
-                    console.error('Error fetching share codes:', error);
+                } catch (error) {  
+                    console.error('Error fetching share codes:', error);  
                 }
             }
             if(!_share_codes || _share_codes.length === 0){
                 ctx.throw(404, '请求目标Card不存在共享码')
             }
-
+            
             let share_code
             if(_share_codes){
                 isValid = check_sharecode(_share_codes)
             }
-
+            
             if(isValid && _share_code){
                 if(feedback){
                     ctx.body = card.feedback;
                 }
                 const maxCount_donw = async (_card, _share_code) => {
-
+                    
                     await strapi.entityService.update('api::card.card',card_id,{
                         data: {
                             share_codes: _card.share_codes.map((i) => ({
@@ -742,12 +746,12 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 ctx.throw(404, '无效的共享码')
             }
         }
-
+        
         if(!findBySharecode){
             const { read } = await strapi.service('api::card.card').clac_finalAuth_byCardID(card_id,user_id);
             const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
-            let card = await strapi.service('api::card.card').find_cardByID(card_id);
-
+            let card = await strapi.service('api::card.card').find_cardByID(card_id); 
+            
             if(read && feedback && card.feedback){
                 const _gid_feedback = card.feedback.id
                 const _feedback = await strapi.entityService.findOne('api::todogroup.todogroup',_gid_feedback,{
@@ -806,14 +810,14 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if((!share_code || !share_by) && (share_code || share_by)){
             ctx.throw(404, '无效的共享连接')
         }
-
+        
         let isValid;
         const check_sharecode = (_share_codes) => {
             let _share_code
             if(_share_codes?.length > 0 && _share_codes.map(i => i.code).includes(share_code)){
                 _share_code = _share_codes.find(i => i.code === share_code);
             }
-
+            
             if(_share_code){
                 // console.log('共享连接',_share_code.creator?.id, share_by)
                 if(_share_code.creator?.id !== Number(share_by)){
@@ -846,7 +850,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             }
         })
         if(card?.disable_share){
-          ctx.throw(400, '当前内容共享已被禁止')
+            ctx.throw(400, '当前内容共享已被禁止')
         } else if(card?.share_codes){
             isValid = check_sharecode(card?.share_codes);
             const find_belongedCard_byStorageID = async (_storage_id) => {

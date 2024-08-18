@@ -53,7 +53,7 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
         const { roleBase } = require('./roleBase.js');
         try {
           const role_base = await roleBase();
-
+          
           const roleBaseResults = await Promise.allSettled(role_base?.map(async (i) => {
             const res = await strapi.entityService.create('api::member-role.member-role', {
               data: {
@@ -63,7 +63,7 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
             });
             return res;
           }));
-
+    
           const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled');
           // @ts-ignore
           const role_admin = successfulResults.find((result) => result.value.subject === 'admin');

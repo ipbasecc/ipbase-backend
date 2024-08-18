@@ -42,7 +42,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                     }
                 }
             });
-
+            
             if(kanban?.relate_by_card) {
                 if(!belonged_card){
                     const card_id = kanban?.relate_by_card.id
@@ -310,14 +310,14 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 }))
             }))
         }
-
+        
         kanban.columns = kanban.columns.map(column => ({
             ...column,
             cards: column.cards?.length > 0 ? column.cards.map(card => {
-                if (card.share_codes?.length > 0) {
+                if (card.share_codes?.length > 0) {  
                     card.share_codes = card.share_codes.filter(code => code.creator.id === user_id);
-                }
-                return card;
+                }  
+                return card;  
             }) : []
         }))
         if(belongedInfo?.belonged_project?.by_team){
@@ -339,7 +339,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                   }
                   return false; // 没有找到交集，返回false
                 }
-
+                
                 return hasIntersection(rolesByFilters, rolesIds)
             }
             const _by_team_id = belongedInfo.belonged_project.by_team.id;
@@ -347,7 +347,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
             // console.log('team', team)
             if(team){
                 const team_mode = team.config?.mode || 'toMany';
-
+                
                 if(team_mode === 'toOne'){
                     kanban.columns = kanban.columns.map(column => ({
                         ...column,

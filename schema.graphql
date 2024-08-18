@@ -427,6 +427,7 @@ type Channel {
   cover(filters: UploadFileFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): UploadFileRelationResponseCollection
   createdAt: DateTime
   description: String
+  elements(filters: ElementFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ElementRelationResponseCollection
   navigation: JSON
   post: PostEntityResponse
   publishedAt: DateTime
@@ -455,6 +456,7 @@ input ChannelFiltersInput {
   channel_owner: UsersPermissionsUserFiltersInput
   createdAt: DateTimeFilterInput
   description: StringFilterInput
+  elements: ElementFiltersInput
   id: IDFilterInput
   navigation: JSONFilterInput
   not: ChannelFiltersInput
@@ -473,6 +475,7 @@ input ChannelInput {
   channel_owner: ID
   cover: [ID]
   description: String
+  elements: [ID]
   navigation: JSON
   post: ID
   publishedAt: DateTime
@@ -1287,6 +1290,7 @@ type Element {
   attachments(filters: UploadFileFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): UploadFileRelationResponseCollection
   author: UsersPermissionsUserEntityResponse
   category: CategoryEntityResponse
+  channel: ChannelEntityResponse
   content: String
   cover: UploadFileEntityResponse
   createdAt: DateTime
@@ -1333,6 +1337,7 @@ input ElementFiltersInput {
   attachedBy_message: MessageFiltersInput
   author: UsersPermissionsUserFiltersInput
   category: CategoryFiltersInput
+  channel: ChannelFiltersInput
   content: StringFilterInput
   createdAt: DateTimeFilterInput
   creator: UsersPermissionsUserFiltersInput
@@ -1366,6 +1371,7 @@ input ElementInput {
   attachments: [ID]
   author: ID
   category: ID
+  channel: ID
   content: String
   cover: ID
   creator: ID
@@ -2011,33 +2017,15 @@ type Mutation {
   changePassword(currentPassword: String!, password: String!, passwordConfirmation: String!): UsersPermissionsLoginPayload
   createBizcard(data: BizcardInput!): BizcardEntityResponse
   createBizcardCollection(data: BizcardCollectionInput!): BizcardCollectionEntityResponse
-  createBoard(data: BoardInput!): BoardEntityResponse
-  createCard(data: CardInput!): CardEntityResponse
   createCategory(data: CategoryInput!): CategoryEntityResponse
   createChannel(data: ChannelInput!): ChannelEntityResponse
-  createColumn(data: ColumnInput!): ColumnEntityResponse
-  createDocument(data: DocumentInput!): DocumentEntityResponse
   createElement(data: ElementInput!): ElementEntityResponse
   createFavorite(data: FavoriteInput!): FavoriteEntityResponse
-  createGroup(data: GroupInput!): GroupEntityResponse
-  createKanban(data: KanbanInput!): KanbanEntityResponse
-  createMember(data: MemberInput!): MemberEntityResponse
-  createMemberRole(data: MemberRoleInput!): MemberRoleEntityResponse
   createMessage(data: MessageInput!): MessageEntityResponse
-  createOverview(data: OverviewInput!): OverviewEntityResponse
   createPopularize(data: PopularizeInput!): PopularizeEntityResponse
   createPost(data: PostInput!): PostEntityResponse
-  createProject(data: ProjectInput!): ProjectEntityResponse
-  createSchedule(data: ScheduleInput!): ScheduleEntityResponse
-  createScheduleEvent(data: ScheduleEventInput!): ScheduleEventEntityResponse
-  createStorage(data: StorageInput!): StorageEntityResponse
-  createStorageFile(data: StorageFileInput!): StorageFileEntityResponse
   createTag(data: TagInput!): TagEntityResponse
   createTalker(data: TalkerInput!): TalkerEntityResponse
-  createTeam(data: TeamInput!): TeamEntityResponse
-  createTeamChannel(data: TeamChannelInput!): TeamChannelEntityResponse
-  createTodo(data: TodoInput!): TodoEntityResponse
-  createTodogroup(data: TodogroupInput!): TodogroupEntityResponse
   createUploadFile(data: UploadFileInput!): UploadFileEntityResponse
   createUploadFolder(data: UploadFolderInput!): UploadFolderEntityResponse
 
@@ -2048,35 +2036,17 @@ type Mutation {
   createUsersPermissionsUser(data: UsersPermissionsUserInput!): UsersPermissionsUserEntityResponse!
   deleteBizcard(id: ID!): BizcardEntityResponse
   deleteBizcardCollection(id: ID!): BizcardCollectionEntityResponse
-  deleteBoard(id: ID!): BoardEntityResponse
-  deleteCard(id: ID!): CardEntityResponse
   deleteCategory(id: ID!): CategoryEntityResponse
   deleteChannel(id: ID!): ChannelEntityResponse
-  deleteColumn(id: ID!): ColumnEntityResponse
-  deleteDocument(id: ID!): DocumentEntityResponse
   deleteElement(id: ID!): ElementEntityResponse
   deleteFavorite(id: ID!): FavoriteEntityResponse
-  deleteGroup(id: ID!): GroupEntityResponse
-  deleteKanban(id: ID!): KanbanEntityResponse
-  deleteMember(id: ID!): MemberEntityResponse
-  deleteMemberRole(id: ID!): MemberRoleEntityResponse
   deleteMessage(id: ID!): MessageEntityResponse
-  deleteOverview(id: ID!): OverviewEntityResponse
   deletePermissionTemplete: PermissionTempleteEntityResponse
   deletePopularize(id: ID!): PopularizeEntityResponse
   deletePost(id: ID!): PostEntityResponse
-  deleteProject(id: ID!): ProjectEntityResponse
-  deleteSchedule(id: ID!): ScheduleEntityResponse
-  deleteScheduleEvent(id: ID!): ScheduleEventEntityResponse
   deleteServer: ServerEntityResponse
-  deleteStorage(id: ID!): StorageEntityResponse
-  deleteStorageFile(id: ID!): StorageFileEntityResponse
   deleteTag(id: ID!): TagEntityResponse
   deleteTalker(id: ID!): TalkerEntityResponse
-  deleteTeam(id: ID!): TeamEntityResponse
-  deleteTeamChannel(id: ID!): TeamChannelEntityResponse
-  deleteTodo(id: ID!): TodoEntityResponse
-  deleteTodogroup(id: ID!): TodogroupEntityResponse
   deleteUploadFile(id: ID!): UploadFileEntityResponse
   deleteUploadFolder(id: ID!): UploadFolderEntityResponse
 
@@ -2104,36 +2074,18 @@ type Mutation {
   resetPassword(code: String!, password: String!, passwordConfirmation: String!): UsersPermissionsLoginPayload
   updateBizcard(data: BizcardInput!, id: ID!): BizcardEntityResponse
   updateBizcardCollection(data: BizcardCollectionInput!, id: ID!): BizcardCollectionEntityResponse
-  updateBoard(data: BoardInput!, id: ID!): BoardEntityResponse
-  updateCard(data: CardInput!, id: ID!): CardEntityResponse
   updateCategory(data: CategoryInput!, id: ID!): CategoryEntityResponse
   updateChannel(data: ChannelInput!, id: ID!): ChannelEntityResponse
-  updateColumn(data: ColumnInput!, id: ID!): ColumnEntityResponse
-  updateDocument(data: DocumentInput!, id: ID!): DocumentEntityResponse
   updateElement(data: ElementInput!, id: ID!): ElementEntityResponse
   updateFavorite(data: FavoriteInput!, id: ID!): FavoriteEntityResponse
   updateFileInfo(id: ID!, info: FileInfoInput): UploadFileEntityResponse!
-  updateGroup(data: GroupInput!, id: ID!): GroupEntityResponse
-  updateKanban(data: KanbanInput!, id: ID!): KanbanEntityResponse
-  updateMember(data: MemberInput!, id: ID!): MemberEntityResponse
-  updateMemberRole(data: MemberRoleInput!, id: ID!): MemberRoleEntityResponse
   updateMessage(data: MessageInput!, id: ID!): MessageEntityResponse
-  updateOverview(data: OverviewInput!, id: ID!): OverviewEntityResponse
   updatePermissionTemplete(data: PermissionTempleteInput!): PermissionTempleteEntityResponse
   updatePopularize(data: PopularizeInput!, id: ID!): PopularizeEntityResponse
   updatePost(data: PostInput!, id: ID!): PostEntityResponse
-  updateProject(data: ProjectInput!, id: ID!): ProjectEntityResponse
-  updateSchedule(data: ScheduleInput!, id: ID!): ScheduleEntityResponse
-  updateScheduleEvent(data: ScheduleEventInput!, id: ID!): ScheduleEventEntityResponse
   updateServer(data: ServerInput!): ServerEntityResponse
-  updateStorage(data: StorageInput!, id: ID!): StorageEntityResponse
-  updateStorageFile(data: StorageFileInput!, id: ID!): StorageFileEntityResponse
   updateTag(data: TagInput!, id: ID!): TagEntityResponse
   updateTalker(data: TalkerInput!, id: ID!): TalkerEntityResponse
-  updateTeam(data: TeamInput!, id: ID!): TeamEntityResponse
-  updateTeamChannel(data: TeamChannelInput!, id: ID!): TeamChannelEntityResponse
-  updateTodo(data: TodoInput!, id: ID!): TodoEntityResponse
-  updateTodogroup(data: TodogroupInput!, id: ID!): TodogroupEntityResponse
   updateUploadFile(data: UploadFileInput!, id: ID!): UploadFileEntityResponse
   updateUploadFolder(data: UploadFolderInput!, id: ID!): UploadFolderEntityResponse
 
@@ -2505,65 +2457,29 @@ type Query {
   bizcardCollection(id: ID): BizcardCollectionEntityResponse
   bizcardCollections(filters: BizcardCollectionFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): BizcardCollectionEntityResponseCollection
   bizcards(filters: BizcardFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): BizcardEntityResponseCollection
-  board(id: ID): BoardEntityResponse
-  boards(filters: BoardFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): BoardEntityResponseCollection
-  card(id: ID): CardEntityResponse
-  cards(filters: CardFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): CardEntityResponseCollection
   categories(filters: CategoryFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): CategoryEntityResponseCollection
   category(id: ID): CategoryEntityResponse
   channel(id: ID): ChannelEntityResponse
   channels(filters: ChannelFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ChannelEntityResponseCollection
-  column(id: ID): ColumnEntityResponse
-  columns(filters: ColumnFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ColumnEntityResponseCollection
-  document(id: ID): DocumentEntityResponse
-  documents(filters: DocumentFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): DocumentEntityResponseCollection
   element(id: ID): ElementEntityResponse
   elements(filters: ElementFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ElementEntityResponseCollection
   favorite(id: ID): FavoriteEntityResponse
   favorites(filters: FavoriteFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): FavoriteEntityResponseCollection
-  group(id: ID): GroupEntityResponse
-  groups(filters: GroupFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): GroupEntityResponseCollection
   i18NLocale(id: ID): I18NLocaleEntityResponse
   i18NLocales(filters: I18NLocaleFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): I18NLocaleEntityResponseCollection
-  kanban(id: ID): KanbanEntityResponse
-  kanbans(filters: KanbanFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): KanbanEntityResponseCollection
   me: UsersPermissionsMe
-  member(id: ID): MemberEntityResponse
-  memberRole(id: ID): MemberRoleEntityResponse
-  memberRoles(filters: MemberRoleFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): MemberRoleEntityResponseCollection
-  members(filters: MemberFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): MemberEntityResponseCollection
   message(id: ID): MessageEntityResponse
   messages(filters: MessageFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): MessageEntityResponseCollection
-  overview(id: ID): OverviewEntityResponse
-  overviews(filters: OverviewFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): OverviewEntityResponseCollection
   permissionTemplete(publicationState: PublicationState = LIVE): PermissionTempleteEntityResponse
   popularize(id: ID): PopularizeEntityResponse
   popularizes(filters: PopularizeFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): PopularizeEntityResponseCollection
   post(id: ID): PostEntityResponse
   posts(filters: PostFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): PostEntityResponseCollection
-  project(id: ID): ProjectEntityResponse
-  projects(filters: ProjectFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ProjectEntityResponseCollection
-  schedule(id: ID): ScheduleEntityResponse
-  scheduleEvent(id: ID): ScheduleEventEntityResponse
-  scheduleEvents(filters: ScheduleEventFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ScheduleEventEntityResponseCollection
-  schedules(filters: ScheduleFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): ScheduleEntityResponseCollection
   server: ServerEntityResponse
-  storage(id: ID): StorageEntityResponse
-  storageFile(id: ID): StorageFileEntityResponse
-  storageFiles(filters: StorageFileFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): StorageFileEntityResponseCollection
-  storages(filters: StorageFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): StorageEntityResponseCollection
   tag(id: ID): TagEntityResponse
   tags(filters: TagFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): TagEntityResponseCollection
   talker(id: ID): TalkerEntityResponse
   talkers(filters: TalkerFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): TalkerEntityResponseCollection
-  team(id: ID): TeamEntityResponse
-  teamChannel(id: ID): TeamChannelEntityResponse
-  teamChannels(filters: TeamChannelFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): TeamChannelEntityResponseCollection
-  teams(filters: TeamFiltersInput, pagination: PaginationArg = {}, publicationState: PublicationState = LIVE, sort: [String] = []): TeamEntityResponseCollection
-  todo(id: ID): TodoEntityResponse
-  todogroup(id: ID): TodogroupEntityResponse
-  todogroups(filters: TodogroupFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): TodogroupEntityResponseCollection
-  todos(filters: TodoFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): TodoEntityResponseCollection
   uploadFile(id: ID): UploadFileEntityResponse
   uploadFiles(filters: UploadFileFiltersInput, pagination: PaginationArg = {}, sort: [String] = []): UploadFileEntityResponseCollection
   uploadFolder(id: ID): UploadFolderEntityResponse

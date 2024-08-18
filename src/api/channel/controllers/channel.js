@@ -6,4 +6,8 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
-module.exports = createCoreController('api::channel.channel');
+module.exports = createCoreController('api::channel.channel', ({strapi}) => ({
+    // async find(ctx){
+        
+    // }
+}));

@@ -101,7 +101,7 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
         const { roleBase } = require('./roleBase.js');
         try {
           const role_base = await roleBase();
-
+          
           const roleBaseResults = await Promise.allSettled(role_base?.map(async (i) => {
             const res = await strapi.entityService.create('api::member-role.member-role', {
               data: {
@@ -111,11 +111,11 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
             });
             return res;
           }));
-
+    
           const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled');
           // @ts-ignore
           const role_admin = successfulResults.find((result) => result.value.subject === 'admin');
-
+          
           // console.log('successfulResults',successfulResults);
           if (role_admin) {
             const admin = await strapi.entityService.create('api::member.member', {
@@ -128,7 +128,7 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
                   },
               },
             });
-
+    
             if (admin) {
               const data = { roles: successfulResults, members: [admin] };
               return data;
@@ -141,7 +141,8 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
     },
     async getRole(...args) {
         const [ user_id, team_id, collection, field ] = args;
-        let auth = {}
+        let auth = {
+        }
         const team = await strapi.entityService.findOne('api::team.team',team_id,{
             populate: {
                 members: {

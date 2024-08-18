@@ -130,12 +130,6 @@
       "target": "plugin::users-permissions.user",
       "mappedBy": "unliked_element"
     },
-    "creator": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "plugin::users-permissions.user",
-      "inversedBy": "created_elements"
-    },
     "makers": {
       "type": "component",
       "repeatable": true,
@@ -150,6 +144,18 @@
       "relation": "manyToOne",
       "target": "api::message.message",
       "inversedBy": "attached_elements"
+    },
+    "channel": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::channel.channel",
+      "inversedBy": "elements"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "created_elements"
     }
   }
 }

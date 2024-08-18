@@ -27,7 +27,7 @@ module.exports = createCoreService('api::todo.todo',({strapi}) => ({
         const [data,fields_permission,belonged_user,isFeedbackOwner] = args;
         const ctx = strapi.requestContext.get();
         const user_id = Number(ctx.state.user?.id);
-
+        
         let params = {};
         if(data.content && (isFeedbackOwner || (fields_permission.includes('content') || belonged_user))) {
             params.content = data.content

@@ -16,22 +16,165 @@ module.exports = {
     });
 
     const extensionService = strapi.plugin('graphql').service('extension');
-
     extensionService.use({
       resolversConfig: {
         'Mutation.updateChannel': {
           middlewares: [
-            './middlewares/graphql/updateChannel.js',
+            async (next, parent, args, context, info) => {
+                // console.log('context', context)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  let user = await strapi.entityService.findOne('plugin::users-permissions.user',id, {
+                      populate: {
+                          user_channel: {
+                              fields: ['id'],
+                              populate: {
+                                  post: {
+                                      fields: ['id'],
+                                  }
+                              }
+                          }
+                      }
+                  });
+                //   console.log('user', user)
+                  if(!user?.user_channel){
+                      throw new Error('channel not exists');
+                  } else {
+                      const channelId = user.user_channel.id;
+                      args.data.id = channelId;
+                    //   console.log('args', args)
+                      const res = await next(parent, args, context, info);
+                      return res
+                  }
+              }
+            },
           ],
         },
         'Mutation.createPost': {
           middlewares: [
-            './middlewares/graphql/createPost.js',
+            async (next, parent, args, context, info) => {
+                // console.log('context', context)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  let user = await strapi.entityService.findOne('plugin::users-permissions.user',id, {
+                      populate: {
+                          user_channel: {
+                              fields: ['id'],
+                              populate: {
+                                  post: {
+                                      fields: ['id'],
+                                  }
+                              }
+                          }
+                      }
+                  });
+                //   console.log('user', user)
+                  if(user?.user_channel?.post){
+                      throw new Error('channel post already exists');
+                  } else {
+                      const channelId = user.user_channel.id;
+                      args.data.channel = channelId;
+                      args.data.publishedAt = new Date().toISOString();
+                    //   console.log('args', args)
+                      const res = await next(parent, args, context, info);
+                      return res
+                  }
+              }
+            },
           ],
         },
         'Mutation.createMessage': {
           middlewares: [
-            './middlewares/graphql/createMessage.js',
+            async (next, parent, args, context, info) => {
+                // console.log('context', context)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  let user = await strapi.entityService.findOne('plugin::users-permissions.user',id, {
+                      populate: {
+                          user_channel: {
+                              fields: ['id'],
+                              populate: {
+                                  post: {
+                                      fields: ['id'],
+                                  }
+                              }
+                          }
+                      }
+                  });
+                //   console.log('user', user)
+                  if(!user?.user_channel?.post){
+                      throw new Error('channel post not exists');
+                  } else {
+                      const postId = user.user_channel.post.id;
+                      args.data.post = postId;
+                      args.data.publishedAt = new Date().toISOString();
+                    //   console.log('args', args)
+                      const res = await next(parent, args, context, info);
+                      return res
+                  }
+              }
+            },
+          ],
+        },
+        'Mutation.updateUsersBasicinfo': {
+          middlewares: [
+            async (next, parent, args, context, info) => {
+                // console.log('context', context)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  let user = await strapi.entityService.findOne('plugin::users-permissions.user',id);
+                //   console.log('user', user)
+                  if(!user){
+                      throw new Error('channel not exists');
+                  } else {
+                      args.id = user.id;
+                    //   console.log('args', args)
+                      const res = await next(parent, args, context, info);
+                      return res
+                  }
+              }
+            },
+          ],
+        },
+        'Mutation.createElement': {
+          middlewares: [
+            async (next, parent, args, context, info) => {
+            //   console.log('args', args)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  let user = await strapi.entityService.findOne('plugin::users-permissions.user',id,{
+                      populate: {
+                          user_channel: {
+                              fields: ['id']
+                          }
+                      }
+                  });
+                //   console.log('user', user)
+                  if(!user?.user_channel){
+                      throw new Error('your channel not exists');
+                  } else {
+                      args.data.channel = user.user_channel.id;
+                      args.data.publishedAt = new Date().toISOString();
+                    //   args.data.creator = id;
+                      if(!args.data.author){
+                          args.data.author = id;
+                      }
+                      console.log('args', args)
+                      const res = await next(parent, args, context, info);
+                      return res
+                  }
+              }
+            },
           ],
         },
       },

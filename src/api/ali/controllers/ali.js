@@ -4,9 +4,9 @@
  * A set of functions called "actions" for `ali`
  */
 const { STS } = require('ali-oss');
-
+ 
 const sts = new STS({
-//   endpoint: 'oss-cn-shanghai.aliyuncs.com',
+//   endpoint: 'oss-cn-shanghai.aliyuncs.com', 
   accessKeyId: process.env.ALI_OSS_ACCESS_KEY_ID,
   accessKeySecret: process.env.ALI_OSS_ACCESS_KEY_SECRET,
 });
@@ -24,7 +24,7 @@ module.exports = {
 
         // // @ts-ignore
         // let ststoken = sts.assumeRole('acs:ram::1176764569708254:role/ramosssts', ``, '3000', 'sessionstrapi').then((result) => {
-
+            
         // }).catch((err) => {
         //     console.log(err);
         // });

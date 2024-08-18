@@ -166,7 +166,7 @@ module.exports = {
                     }
                 ]
             },
-            "marster": {
+            "master": {
                 "collection": "schedule",
                 "create": true,
                 "delete": false,

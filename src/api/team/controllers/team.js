@@ -90,7 +90,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         if(team){
             // @ts-ignore
             const user_members = team.members?.filter(i => i.by_user.id == user_id)
-
+            
             const isIn = user_members?.length > 0;
             if(isIn){
                 if(!team.publishedAt){
@@ -101,7 +101,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                         // @ts-ignore
                         team.team_channels = team.team_channels.filter(i => i.publishedAt);
                     }
-
+                    
                     const isUnconfirmed = user_members.map(i => i.member_roles).flat(2).filter(j => j.subject === 'unconfirmed')?.length > 0
                     const isBlocked = user_members.map(i => i.member_roles).flat(2).filter(j => j.subject === 'blocked')?.length > 0
                     // console.log('status', isUnconfirmed, isBlocked)
@@ -218,7 +218,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             let params = {};
             if(data.name || data.display_name){
                 params.display_name = data.name || data.display_name;
-
+                
                 const team = await strapi.entityService.findOne('api::team.team',team_id);
                 if(team?.mm_team){
                     const mmapi = strapi.plugin('mattermost').service('mmapi');
@@ -256,7 +256,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         let team_id = Number(ctx.params.id);
-
+        
         let user
         if(!user_id){
             ctx.throw(400, '请先登陆')
@@ -276,7 +276,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                    team.team_channels.map( async (i) => {
                        const mm_channel_id = i.mm_channel?.id;
                        if(mm_channel_id){
-                          await mmapi.deleteChannel(mm_channel_id)
+                          await mmapi.deleteChannel(mm_channel_id) 
                        }
                    })
                 }
@@ -299,7 +299,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 const mm_team = team?.mm_team;
                 await mmapi.deleteTeam(mm_team.id);
             }
-
+            
             const remove = await strapi.entityService.delete('api::team.team',team_id);
             if(remove){
                 const res = {
@@ -315,13 +315,13 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         let { team_id } = ctx.params;
         team_id = Number(team_id);
         const data = ctx.request.body
-
+        
         const team = await strapi.service('api::team.team').findTeamByID(team_id);
         let auth  = await strapi.service('api::team.team').getRole(user_id,team_id,'team','invite_uris');
         if(auth.isBlock){
             ctx.throw(401, '您无权邀请成员')
         }
-
+          
         if(auth.field) {
             const makeid = (length) => {
                 let result = '';
@@ -458,7 +458,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 return res
             }
         }
-
+        
     },
     async acceptInvite(ctx) {
         await this.validateQuery(ctx);
@@ -470,13 +470,13 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         if(!team_id) {
             ctx.throw(401, '团队ID不能缺少')
         }
-
+        
         let isInvitor;
         let isUnconfirmed;
         let invite;
         let unconfirmed_memberRole;
         const team = await strapi.service('api::team.team').findTeamByID(team_id);
-
+        
         if(team){
             // 如果团队没有未确认角色，那么先创建一个
             unconfirmed_memberRole = team.member_roles?.find(i => i.subject === 'unconfirmed')?.id || null;
@@ -659,7 +659,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 response.leave = {
                     removedUser: user_id_by_willRemove
                 }
-            }
+            }        
             return response
 
         } else {
@@ -696,7 +696,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             unconfirmed_roleId = team.member_roles.find(i => i.subject === 'unconfirmed')?.id
             blocked_roleId = team.member_roles.find(i => i.subject === 'blocked')?.id
             auth  = await strapi.service('api::team.team').getRole(user_id,team_id,'team','manageMember');
-
+            
             if(auth.isBlock){
                 auth = false
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
@@ -706,7 +706,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             } else if(auth.unconfirmed){
                 auth = false
                 return '您无权执行此操作'
-            }
+            }            
         }
 
         // auth?.field 返回该字段的modify值（真/假）
@@ -740,7 +740,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             if(body.new_roles.includes(unconfirmed_roleId)){
                 await mmapi.RemoveUserFromTeam(mm_team.id,mm_user_id);
             }
-
+            
             // *****
             // *****
             // *****
@@ -801,7 +801,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const { team_id } = ctx.params;
-
+    
         const team = await strapi.service('api::team.team').findTeamByID(team_id);
         if(team){
             const allAdmins = team.member_roles.filter(j => j.subject === 'admin')

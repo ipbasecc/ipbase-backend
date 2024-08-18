@@ -64,7 +64,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             // strapi.provider(room, ydoc);
             let kanban = await strapi.service('api::kanban.kanban').get_kanbanSourceData_byID(kanban_id);
             if(kanban){
-                const processed_data = strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(kanban, user_id, ACL, isSuper_member);
+                const processed_data = strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(kanban, user_id, ACL, isSuper_member, belongedInfo);
                 return processed_data
             }
         }

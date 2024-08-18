@@ -67,6 +67,12 @@
     },
     "navigation": {
       "type": "json"
+    },
+    "elements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::element.element",
+      "mappedBy": "channel"
     }
   }
 }

@@ -31,7 +31,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
                 ]
             }
         })
-
+        
         const total = await strapi.query('api::card.card').count({
             filters: {
                 $or: [
@@ -40,7 +40,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
                 ]
             }
         });
-
+        
         return {todogroups,total,page,per_page}
     },
     async findOne(ctx) {
@@ -70,12 +70,12 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         let members;
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-
+            
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
 
-            const { read, create, modify, remove } =
+            const { read, create, modify, remove } = 
                 strapi.service('api::project.project').calc_collection_auth(ACL,collection);
             auth = read
         }
@@ -274,12 +274,12 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         let members;
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-
+            
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
 
-            const { read, create, modify, remove } =
+            const { read, create, modify, remove } = 
                 strapi.service('api::project.project').calc_collection_auth(ACL,collection);
             auth = modify
 
@@ -356,7 +356,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         }
         if(auth){
             let params = strapi.service('api::todogroup.todogroup').process_updateTodogroup_params(data, fields_permission, orderTodo, belonged_user);
-
+            
             let update_todogroup = await strapi.entityService.update('api::todogroup.todogroup', todogroup_id, {
                 data: params,
                 populate: {
@@ -385,7 +385,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         let members;
         const calc_auth = (members,member_roles) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-
+            
             if(is_blocked){
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
             }
@@ -394,7 +394,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
             auth = remove
         }
         let todogroup = await strapi.service('api::todogroup.todogroup').find_todogroup_byID(todogroup_id);
-
+        
         if(todogroup?.creator?.id === user_id || todogroup?.user?.id === user_id) {
             auth = true
         }

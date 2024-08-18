@@ -17,7 +17,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
         if((!share_code || !share_by) && (share_code || share_by)){
             ctx.throw(404, '无效的共享连接')
         }
-
+        
         const get_schedule = async (_id) => {
             const res = await strapi.entityService.findOne('api::schedule.schedule',_id,{
                 populate: {
@@ -97,14 +97,14 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
             if(_schedule?.disable_share){
                 ctx.throw(400, '当前共享已被禁止')
             }
-
+            
             const _share_codes = _schedule?.share_codes;
-            console.log('_share_codes', _share_codes)
+            // console.log('_share_codes', _share_codes)
             let _share_code
             if(_share_codes?.length > 0 && _share_codes.map(i => i.code).includes(share_code)){
                 _share_code = _share_codes.find(i => i.code === share_code);
             }
-            console.log('_share_code', _share_code)
+            // console.log('_share_code', _share_code)
             if(_share_code){
                 if(_share_code.creator?.id != share_by){
                     ctx.throw(404, '无效的共享连接')
@@ -196,7 +196,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
             const res = await clacAuth_by_project(project_id);
             auth = res
         }
-
+        
         if(by_info.by === 'card' && by_info.card_id){
             params.data.by_card = by_info.card_id;
             const card_id = by_info.card_id;
@@ -233,12 +233,12 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                         "message": `${by_info.card_id ? '卡片' : '项目'}规划：${create.name}被创建`,
                         "props": {
                             "strapi": {
-                            "data": {
-                                is: by_info.project_id ? 'project' : 'card',
-                                by_user: user_id,
-                                action: "schedule_created",
-                                body: create,
-                            },
+                                "data": {
+                                    is: by_info.project_id ? 'project' : 'card',
+                                    by_user: user_id,
+                                    action: "schedule_created",
+                                    body: create,
+                                },
                             },
                         }
                     }
@@ -359,7 +359,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                     }
                 }
             })
-
+            
             if(_update){
                 if(!shareAuth && data.data?.share_code){
                     _update.attachInfo = '您无权分享规划'
