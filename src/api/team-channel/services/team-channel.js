@@ -95,56 +95,51 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
             unconfirmed: false,
             field: false,
         }
-        const channel = await strapi.entityService.findOne('api::team-channel.team-channel',channel_id,{
-            populate: {
-                members: {
-                    fields: ['id'],
+        const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
+        const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
+          where: {
+            members: {
+                by_user: {
+                    id: user_id
+                }
+            },
+            by_team_channel: {
+                id: channel_id
+            }
+          },
+          populate: {
+                ACL: {
                     populate: {
-                        by_user: {
-                            fields: ['id']
-                        },
-                        member_roles: {
-                            populate: {
-                                ACL: {
-                                    populate: {
-                                        fields_permission: true
-                                    }
-                                }
-                            }
-                        }
+                        fields_permission: true
                     }
                 }
             }
-        })
-        if(channel){
-            const roles = channel.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2);
-            if(roles?.length === 0){
-                if(channel.mm_channel?.type === 'O'){
-                    auth = {
-                        read: true
-                    }
-                } else {
-                    auth = false
+        });
+        const roles = memberRoles
+        if(roles?.length === 0){
+            if(channel.mm_channel?.type === 'O'){
+                auth = {
+                    read: true
                 }
-                return auth
             }
-            const _ACLs = roles?.map(i => i.ACL).flat(2)?.filter(j => j.collection === collection).flat(2);
-            // @ts-ignore
-            auth = {
-                create: _ACLs.filter(i => i.create)?.length > 0,
-                delete: _ACLs.filter(i => i.delete)?.length > 0,
-                read: channel.mm_channel?.type === 'O' ? true : _ACLs.filter(i => i.read)?.length > 0,
-                modify: _ACLs.filter(i => i.modify)?.length > 0
-            }
-            if(field){
-                const _field = _ACLs.map(i => i.fields_permission)?.flat(2)?.filter(j => j.field === field && j.modify)
-                auth.field = _field?.length > 0 // 鉴定提供的字段是否是modify
-            }
-            const blocks = channel.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2).filter(k => k.subject === 'blocked');
-            const unconfirmeds = channel.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2).filter(k => k.subject === 'unconfirmed');
-            auth.isBlock = blocks?.length > 0
-            auth.unconfirmed = unconfirmeds?.length > 0
+            return auth
         }
+        const _ACLs = roles?.map(i => i.ACL).flat(2)?.filter(j => j.collection === collection).flat(2);
+        // @ts-ignore
+        auth = {
+            create: _ACLs.filter(i => i.create)?.length > 0,
+            delete: _ACLs.filter(i => i.delete)?.length > 0,
+            read: channel.mm_channel?.type === 'O' ? true : _ACLs.filter(i => i.read)?.length > 0,
+            modify: _ACLs.filter(i => i.modify)?.length > 0
+        }
+        if(field){
+            const _field = _ACLs.map(i => i.fields_permission)?.flat(2)?.filter(j => j.field === field && j.modify)
+            auth[field] = _field?.length > 0 // 鉴定提供的字段是否是modify
+        }
+        const blocks = roles.filter(k => k.subject === 'blocked');
+        const unconfirmeds = roles.filter(k => k.subject === 'unconfirmed');
+        auth.isBlock = blocks?.length > 0
+        auth.unconfirmed = unconfirmeds?.length > 0
         return auth
     },
     async findChannelByID(...args) {

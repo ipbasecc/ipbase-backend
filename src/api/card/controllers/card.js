@@ -11,17 +11,17 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
     async find(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
-        const page = Number(ctx.query.page);
-        const per_page = Number(ctx.query.per_page);
+        const start = Number(ctx.query.start);
+        const limit = Number(ctx.query.limit);
         const team_id = Number(ctx.query.team_id);
 
         // console.log('team_id', team_id)
-        if(!page || !per_page){
+        if (start < 0 || limit < 0) {
             ctx.throw(400, '需要提供分页数据')
         }
         const cards = await strapi.entityService.findMany('api::card.card',{
-            start: (page - 1) * per_page,
-            limit: per_page,
+            start: start,
+            limit: limit,
             filters: {
                 $and: [
                     {
@@ -43,7 +43,14 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 overviews: {
                     populate: {
                         media: {
-                            fields: ['ext','url']
+                            fields: ['id', 'ext','url']
+                        },
+                        marker_todos: {
+                            populate: {
+                                attachment: {
+                                    fields: ['id', 'ext','url']
+                                }
+                            }
                         }
                     }
                 },
@@ -95,24 +102,22 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 },
             }
         });
-        return {cards,total,page,per_page}
+        return {cards,total,start,limit}
     },
     async findFollowed(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
-        const page = Number(ctx.query.page);
-        const per_page = Number(ctx.query.per_page);
+        const start = Number(ctx.query.start);
+        const limit = Number(ctx.query.limit);
         const team_id = Number(ctx.query.team_id);
 
-        if(!page || !per_page){
+        if (start < 0 || limit < 0) {
             ctx.throw(400, '需要提供分页数据')
         }
-        if(!page > 1){
-            ctx.throw(500, '首页内容已经加载')
-        }
+        
         const cards = await strapi.entityService.findMany('api::card.card',{
-            limit: per_page,
-            start: (page -1) * per_page,
+            limit: limit,
+            start: start,
             filters: {
                 $and: [
                     {
@@ -145,6 +150,13 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     populate: {
                         media: {
                             fields: ['ext','url']
+                        },
+                        marker_todos: {
+                            populate: {
+                                attachment: {
+                                    fields: ['id', 'ext','url']
+                                }
+                            }
                         }
                     }
                 },
@@ -195,7 +207,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             }
         });
         
-        return {cards,total,page,per_page}
+        return {cards,total,start,limit}
     },
     async create(ctx) {
         await this.validateQuery(ctx);
@@ -301,20 +313,49 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 cardEntry = await strapi.entityService.create('api::card.card', {
                     data: params,
                     populate: {
-                        followed_bies: {
-                            fields: ['id','username'],
+                        overviews: {
                             populate: {
-                                profile: {
-                                    fields: ['title'],
+                                media: {
+                                    fields: ['id', 'ext','url']
+                                },
+                                marker_todos: {
                                     populate: {
-                                        avatar: {
-                                            fields: ['ext','url']
+                                        attachment: {
+                                            fields: ['id', 'ext','url']
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
+                        },
+                        card_members: {
+                            populate: {
+                                by_user: {
+                                    fields: ['id','username','mm_profile'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    fields: ['id','url','ext']
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                member_roles: {
+                                    fields: ['id','subject']
+                                }
+                            }
+                        },
+                        member_roles: {
+                            populate: {
+                                ACL: {
+                                    populate: {
+                                        fields_permission: true
+                                    }
+                                }
+                            }
+                        },
+                    },
                 })
                 if(cardEntry) {
                     await strapi.entityService.create('api::storage.storage',{
@@ -372,13 +413,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                             "message": `新建卡片：${cardEntry.name ? cardEntry.name : 'id:' + cardEntry.id}`,
                             "props": {
                                 "strapi": {
-                                "data": {
-                                    "is": "card",
-                                    "by_user": user_id,
-                                    "action": "cardCreated",
-                                    "column_id": columnEntry.id,
-                                    "body": cardEntry,
-                                },
+                                    "event": "create_card"
                                 },
                             }
                         }
@@ -390,13 +425,16 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                                     mm_thread: mmMsg.data
                                 }
                             })
-                            return update
-                        } else {
-                          return cardEntry
+                            cardEntry.mm_thread = update.mm_thread
                         }
-                    } else {
-                        return cardEntry
                     }
+                    
+                    strapi.$publish('card:created', [ctx.room_name], {
+                        team_id: ctx.default_team?.id,
+                        column_id: column_id,
+                        data: cardEntry
+                    });
+                    return cardEntry
                 }
             };
             
@@ -423,7 +461,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         const card = await strapi.service('api::card.card').find_cardByID(card_id);
         // 如果有收到更新mm_thread的请求，直接从Mattermost读取当前卡片的thread并直接更新
         // 此处无须返回，前端Mattermost的thread并更新UI，这里只是更新Strapi中的数据，方便下次读取
-        if(data.data?.mm_thread?.id === card.mm_thread.id){
+        if(data.data?.mm_thread && data.data.mm_thread?.id === card.mm_thread?.id){
             const post_id = card.mm_thread.id;
             const mmapi = strapi.plugin('mattermost').service('mmapi');
             const thread = await mmapi.getPost(post_id);
@@ -495,20 +533,14 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             
             //  移除成员
             if(data?.remove_member){
-                const _targetMember = card.card_members.find(i => i.id === data?.remove_member);
-                _targetMember?.member_roles?.map(async(i) => {
-                    await strapi.entityService.update('api::member-role.member-role', i.id, {
-                        data: {
-                            members: {
-                                disconnect: [ data?.remove_member ]
-                            }
-                        }
-                    })
-                })
-                await strapi.entityService.update('api::card.card', card_id, {
+                const cardRoles_ids = card.member_roles?.map(i => i.id) || [];
+                const updateMember = await strapi.entityService.update('api::member.member', data.remove_member, {
                     data: {
-                        card_members: {
-                            disconnect: [ data?.remove_member ]
+                        by_cards: {
+                            disconnect: [card_id]
+                        },
+                        member_roles: {
+                            disconnect: cardRoles_ids
                         }
                     }
                 })
@@ -550,6 +582,15 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     card.belonged_card = belongedInfo.belonged_card.id;
                 }
                 const res = await strapi.service('api::card.card').initFullCard(card)
+                
+                if(ctx.room_name){
+                    strapi.$publish('card:updated', [ctx.room_name], {
+                        team_id: ctx.default_team?.id,
+                        card_id: card_id,
+                        data: res
+                    });
+                }
+                
                 return res
             }
         }
@@ -571,6 +612,12 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if(remove) {
             const _card = await strapi.entityService.delete('api::card.card', card_id);
             if(_card) {
+                if(ctx.room_name){
+                    strapi.$publish('card:deleted', [ctx.room_name], {
+                        team_id: ctx.default_team?.id,
+                        card_id: card_id
+                    });
+                }
                 return _card
             }
         } else {
@@ -582,8 +629,11 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         const user_id = Number(ctx.state.user?.id);
         let card_id = Number(ctx.params.id);
         // console.log('card_id', card_id)
+        let card;
         if(!card_id) {
             ctx.throw(400, '需要提供卡片ID')
+        } else {
+            card = await strapi.service('api::card.card').find_cardByID(card_id);
         }
         
         const { share_code, share_by, feedback } = ctx.request.query;
@@ -625,7 +675,6 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         let findBySharecode
         if(share_code && share_by){
             findBySharecode = true
-            let card = await strapi.service('api::card.card').find_cardByID(card_id);
             // console.log('card', card)
             if(card?.disable_share){
                 ctx.throw(400, '当前内容共享已被禁止')
@@ -750,7 +799,6 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         if(!findBySharecode){
             const { read } = await strapi.service('api::card.card').clac_finalAuth_byCardID(card_id,user_id);
             const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
-            let card = await strapi.service('api::card.card').find_cardByID(card_id); 
             
             if(read && feedback && card.feedback){
                 const _gid_feedback = card.feedback.id
@@ -768,9 +816,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                 if(_feedback) {
                     return _feedback
                 }
-            }
-
-            if(read) {
+            }else if(read) {
                 // 只有在开启card弹框时，才会触发findOne，在此时再选择是否添加对应模块，
                 // 如果用户设置card的类型非task、或者从来没有开启过card详情，没有必要附加从来都不用的模块
                 // 因此此时再选择新建某些模块

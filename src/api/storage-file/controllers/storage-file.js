@@ -23,7 +23,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         const batchCreate = async (Arr) => {
             const promises = Arr.map(async (i) => {
               try {
-                const res = await strapi.entityService.create('api::storage-file.storage-file', {
+                let res = await strapi.entityService.create('api::storage-file.storage-file', {
                   data: {
                     name: i.name,
                     file: i.file_id,
@@ -48,6 +48,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                     }
                   }
                 });
+                res.storage_id = i.storage_id
                 return res;
               } catch (error) {
                 console.error('Error creating entity:', error);
@@ -64,13 +65,23 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
               // @ts-ignore
               .map((result) => result.value);
           
+            let response = {
+                team_id: ctx.default_team?.id,
+                data: successfulResults
+            }
+            strapi.$publish('file:batchCreated', [ctx.room_name], response);
             return successfulResults;
           };
           
           const result = await batchCreate(data);
           if(result){
               // console.log('result result', result);
-              return result
+            let response = {
+                team_id: ctx.default_team?.id,
+                data: result
+            }
+            strapi.$publish('file:removed', [ctx.room_name], response);
+            return result
           }
     },
     async delete(ctx) {
@@ -92,6 +103,13 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         if(auth){
             const remove = await strapi.entityService.delete('api::storage-file.storage-file',id);
             if(remove){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_file_id: id
+                    }
+                }
+                strapi.$publish('file:removed', [ctx.room_name], response);
                 return 'OK'
             } else {
                 ctx.throw(403, '您无权删除此文件')

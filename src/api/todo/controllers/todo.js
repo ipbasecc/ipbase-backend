@@ -11,12 +11,14 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
     async create(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user?.id);
-        let { data, todogroup_id, shareInfo } = ctx.request.body;
+        let { data, todogroup_id, shareInfo, after } = ctx.request.body;
+        // console.log(ctx.request.body)
         let params = data;
         const fingerprint = ctx.fingerprint
         if(!todogroup_id) {
             ctx.throw(401, '必须指定待办分组ID')
-        } else {
+        }
+        if(todogroup_id && !after ){
             params.todogroup = {
                 set: [todogroup_id]
             }
@@ -25,6 +27,15 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
             let create_todo = await strapi.entityService.create('api::todo.todo', {
                 data: params
             });
+            if(create_todo && after){
+                const update_todogroup = await strapi.entityService.update('api::todogroup.todogroup', todogroup_id, {
+                    data: {
+                        todos: {
+                            connect: [{ id: create_todo.id, position: { after: after } }],
+                        }
+                    }
+                })
+            }
             return create_todo
         }
         if(shareInfo){
@@ -87,7 +98,10 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
                             } else {
                                 // 满足可以提交反馈的条件后，创建反馈并清理Redis缓存
                                 res = await create_todoFn();
-                                strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
+                                const isRestCacheEnabled = strapi.checkPluginEnable('rest-cache')
+                                if(isRestCacheEnabled){
+                                    strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
+                                }
                             }
                         }
                     } else {
@@ -172,41 +186,27 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         }
         if(auth){
             let create_todo = await create_todoFn();
+            
             if(todogroup?.card){
-                const card = todogroup?.card
-                strapi.service('api::card.card').clearRedisCacheByCardID(card.id);
-                const mmChannel_id = project?.mm_channel?.id
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
-                // const cardName = strapi.service('api::card.card').clac_cardName(card);
-                let params = {
-                    "channel_id": mmChannel_id,
-                    "message": `卡片：${card.name ? card.name : 'id:' + card.id} 新增了待办：${create_todo.content}`,
-                    "props": {
-                        "strapi": {
-                          "data": {
-                            "is": "todo",
-                            "by_user": user_id,
-                            "card_id": card.id,
-                            "group_id": todogroup_id,
-                            "action": "card_todo_created",
-                            "body": create_todo,
-                          },
-                        },
-                    }
+                const isRedisCacheEnabled = strapi.checkPluginEnable('rest-cache')
+                if(isRedisCacheEnabled){
+                    strapi.service('api::card.card').clearRedisCacheByCardID(todogroup?.card.id);
                 }
-                const mmMsg = await mmapi.createPost(params);
-                // console.log('create_todo',create_todo)
-                if(mmMsg?.data && create_todo){
-                    const update = await strapi.entityService.update('api::todo.todo',create_todo.id,{
-                        data: {
-                            mm_thread: mmMsg.data
-                        }
-                    })
-                    return update
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    card_id: todogroup?.card.id,
+                    todogroup_id: todogroup_id,
+                    data: create_todo
                 }
-            } else {
-                return create_todo
+                if(after){
+                    response.position = { after: after }
+                }
+                strapi.$publish('todo:created', [ctx.room_name], response);
             }
+            if(after){
+                create_todo.position = { after: after }
+            }
+            return create_todo
         }
     },
     async update(ctx) {
@@ -220,24 +220,6 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         // console.log('fingerprint',props.fingerprint)
         if(!fingerprint && !ctx.state.user) {
             ctx.throw(401, '访问未授权')
-        }
-
-        // 如果有收到更新mm_thread的请求，直接从Mattermost读取当前卡片的thread并直接更新
-        // 此处无须返回，前端Mattermost的thread并更新UI，这里只是更新Strapi中的数据，方便下次读取
-        if(data?.mm_thread){
-            const todo = await strapi.entityService.findOne('api::todo.todo', id);
-            if(todo?.id === todo_id){
-                const post_id = todo.mm_thread.id;
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
-                const thread = await mmapi.getPost(post_id);
-                if(thread?.data) {
-                    await strapi.entityService.update('api::todo.todo', todo_id,{
-                        data: {
-                            mm_thread: thread.data
-                        }
-                    });
-                }
-            }
         }
 
         const todo = await strapi.entityService.findOne('api::todo.todo', id);
@@ -263,13 +245,17 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         }
 
         let todogroup = await strapi.service('api::todo.todo').find_belonged_todogroup(todo_id);
+        console.log('todogroup', todogroup)
         if(todogroup?.creator?.id === user_id || todogroup?.user?.id === user_id) {
             auth = true
             belonged_user = true
         }
 
+        let card_id;
+        if(todogroup?.card){
+            card_id = todogroup.card.id
+        }
         if(!auth){
-            let card_id;
             if(props?.card_id){
                 card_id = props?.card_id;
             }
@@ -333,7 +319,20 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
                 }
             });
             if(props?.card_id){
-                strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
+                const isRestCacheEnabled = strapi.checkPluginEnable('rest-cache')
+                if(isRestCacheEnabled){
+                    strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
+                }
+            }
+            console.log('card_id', card_id)
+            if(card_id){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    card_id: card_id,
+                    todogroup_id: todogroup.id,
+                    data: update_todo
+                }
+                strapi.$publish('todo:updated', [ctx.room_name], response);
             }
             return update_todo
         } else {
@@ -402,9 +401,8 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         if(card && !auth){
             await getAuthByCard(card)
         }
+        let todogroup = await strapi.service('api::todo.todo').find_belonged_todogroup(id);
         if(!auth){
-            let todogroup = await strapi.service('api::todo.todo').find_belonged_todogroup(id);
-            // console.log('todogroup', todogroup)
             if(!todogroup){
                 auth = false
             } else {
@@ -438,7 +436,28 @@ module.exports = createCoreController('api::todo.todo', ({strapi}) => ({
         if(auth) {
             let delete_todo = await strapi.entityService.delete('api::todo.todo', id);
             if(card?.feedback?.id === id){
-                strapi.service('api::card.card').clearRedisCacheByCardID(card.id);
+                const isRestCacheEnabled = strapi.checkPluginEnable('rest-cache')
+                if(isRestCacheEnabled){
+                    strapi.service('api::card.card').clearRedisCacheByCardID(props.card_id);
+                }
+            }
+            let _card_id;
+            if(card){
+                _card_id = card.id
+            }
+            if(todogroup?.card){
+                _card_id = todogroup.card.id
+            }
+            if(_card_id){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    card_id: _card_id,
+                    todogroup_id: todogroup.id,
+                    data: {
+                        removed_todo_id: id
+                    }
+                }
+                strapi.$publish('todo:removed', [ctx.room_name], response);
             }
             if(delete_todo) return '待办已删除'
         } else {

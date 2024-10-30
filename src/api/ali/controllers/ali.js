@@ -34,5 +34,44 @@ module.exports = {
     } catch (err) {
         ctx.body = err;
     }
+  },
+  queryMedias: async (ctx) => {
+    const user_id = Number(ctx.state.user.id);
+    if(!user_id) {
+        ctx.throw(401, '您无权访问该数据')
+    }
+    const data = ctx.request.body.data;
+    if(!data.overview_id){
+        ctx.throw(401, 'need fileURLs')
+    }
+    const fileURL = await strapi.service('api::ali.ali').getMediaByOverviewID(data.overview_id);
+    if(fileURL){
+        const res = await strapi.service('api::ali.ali').queryMedias(fileURL);
+        if(res){
+            return res
+        }
+    } else {
+        ctx.throw(404, 'media not exist')
+    }
+  },
+  addMedia: async (ctx) => {
+    const user_id = Number(ctx.state.user.id);
+    if(!user_id) {
+        ctx.throw(401, '您无权访问该数据')
+    }
+    
+    const data = ctx.request.body.data;
+    if(!data.overview_id){
+        ctx.throw(401, 'need fileURLs')
+    }
+    const fileURL = await strapi.service('api::ali.ali').getMediaByOverviewID(data.overview_id);
+    if(fileURL){
+        const res = await strapi.service('api::ali.ali').addMedia(fileURL);
+        if(res){
+            return res
+        }
+    } else {
+        ctx.throw(404, 'media not exist')
+    }
   }
 };

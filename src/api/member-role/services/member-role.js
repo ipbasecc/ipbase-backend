@@ -93,5 +93,74 @@ module.exports = createCoreService('api::member-role.member-role',({strapi}) => 
             const ctx = strapi.requestContext.get();
             ctx.throw(404, '未找到所属的规划')
         }
+    },
+    async findTeamRole(...args) {
+        const [user_id, team_id] = args;
+        const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
+          where: {
+            members: {
+                by_user: {
+                    id: user_id
+                }
+            },
+            by_team: {
+                id: team_id
+            },
+          },
+          populate: {
+              ACL: {
+                  populate: {
+                      fields_permission: true
+                  }
+              }
+          }
+        });
+        return memberRoles
+    },
+    async findProjectRole(...args) {
+        const [user_id, project_id] = args;
+        const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
+          where: {
+            members: {
+                by_user: {
+                    id: user_id
+                }
+            },
+            by_project: {
+                id: project_id
+            },
+          },
+          populate: {
+              ACL: {
+                  populate: {
+                      fields_permission: true
+                  }
+              }
+          }
+        });
+        return memberRoles
+    },
+    async findCardRole(...args) {
+        const [user_id, card_id] = args;
+        const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
+          where: {
+            members: {
+                by_user: {
+                    id: user_id
+                }
+            },
+            by_card: {
+                id: card_id
+            },
+          },
+          populate: {
+              ACL: {
+                  populate: {
+                      fields_permission: true
+                  }
+              }
+          }
+        });
+        return memberRoles
     }
 }));

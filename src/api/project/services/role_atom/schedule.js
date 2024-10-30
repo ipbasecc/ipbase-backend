@@ -265,6 +265,39 @@ module.exports = {
                     }
                 ]
             },
+            "blocked": {
+                "collection": "schedule",
+                "create": false,
+                "delete": false,
+                "read": false,
+                "modify": false,
+                "fields_permission": [
+                    {
+                        "field": "name",
+                        "modify": false
+                    },
+                    {
+                        "field": "share", // 对应 passcode 字段，填写密码后可以通过密码访问
+                        "modify": false
+                    },
+                    {
+                        "field": "type",
+                        "modify": false
+                    },
+                    {
+                        "field": "schedule_events",
+                        "modify": false
+                    },
+                    {
+                        "field": "order",
+                        "modify": false
+                    },
+                    {
+                        "field": "share",
+                        "modify": false
+                    }
+                ]
+            },
         }
 
         return _ACL

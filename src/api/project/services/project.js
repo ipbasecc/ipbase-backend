@@ -76,13 +76,13 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
       // 当前用户的成员条目集
       const user_members = members.filter(i => i.by_user.id === user_id);
       // 当前用户成员对应的成员权限ID集
-      const member_role_id = user_members.map(j => j.member_roles.map(k => k.id)).flat(2);
+      const member_role_id = user_members?.length > 0 ? user_members.map(j => j.member_roles.map(k => k.id)).flat(2) : [];
     //   console.log('member_role_id',member_role_id);
 
       // 计算出当前用户成员对应的所有权限
       const _member_roles = member_roles?.map(i => i.id);
     //   console.log('_member_roles',_member_roles);
-      const ACL = member_roles?.filter(i => member_role_id.includes(i.id));
+      const ACL = member_roles?.filter(i => member_role_id?.includes(i.id));
       
     //   console.log('ACL ACL',ACL);
       // 分离出用户成员的名称、方便后续判断是否为特殊成员组
@@ -317,6 +317,15 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
           if(props.orderDocuments) {
               params.project_documents = {
                 set: data.project_documents
+              }
+          } else {
+              ctx.throw(403, '您无权对文档进行排序')
+          }
+      }
+      if(data.storages) {
+          if(props.orderStorages) {
+              params.storages = {
+                set: data.storages
               }
           } else {
               ctx.throw(403, '您无权对文档进行排序')
@@ -670,31 +679,11 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
 
             // @ts-ignore
             const mmuser_id = getMmuser.mm_profile?.id
-            let params = {
-                "channel_id": channel_id,
-                "message": `成员${getMmuser.username}被移出了项目。`,
-                "props": {
-                    "strapi": {
-                        "data": {
-                            "is": 'project',
-                            "by_user": cur_user_id,
-                            "project_id": project.id,
-                            "removedUser": user_id_by_willRemove,
-                            "action": 'member_removed',
-                            "removeMember_id": removeMember_id
-                        }
-                    }
-                }
+            const mmChannel = await mmapi.getChannelMember(channel_id,mmuser_id);
+            if(mmChannel){
+                await mmapi.RemoveUserFromChannel(channel_id,mmuser_id);
             }
-            let post = await mmapi.createPost(params);
-            // console.log('post',post);
-            if(post){
-                const mmChannel = await mmapi.getChannelMember(channel_id,mmuser_id);
-                if(mmChannel){
-                    await mmapi.RemoveUserFromChannel(channel_id,mmuser_id);
-                }
-                return post
-            }
+            return
         }
     },
     async addUser_to_mmChannel(...args){
@@ -763,23 +752,6 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
         }
         // 用户加入当前项目关联的频道后，发送消息
         if(member_channel){
-            // console.log('member_channel',member_channel,channel_id);
-            let params = {
-                "channel_id": channel_id,
-                "message": `成员${joined_user.username}正式加入了项目。`,
-                "props": {
-                    "strapi": {
-                        "data": {
-                            "is": 'project',
-                            "by_user": joined_user.id,
-                            "project_id": project.id,
-                            "action": 'member_joined',
-                            "new_member": target_member
-                        }
-                    }
-                }
-            }
-            await mmapi.createPost(params);
             return member_channel
         }
     },
@@ -831,34 +803,36 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
                     }
                 }
             })
-            let joined_user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id)
-            const mmChannel_id = project.mm_channel?.id;
-            if(joined_user?.mm_profile && mmChannel_id){
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
-                let params = {
-                    "channel_id": mmChannel_id,
-                    "message": `新成员 ${joined_user.username} 申请加入项目`,
-                    "props": {
-                        "strapi": {
-                            "data": {
-                                "is": 'project',
-                                "by_user": joined_user.id,
-                                "project_id": project.id,
-                                "action": 'member_joined',
-                                "new_member": updateMember
-                            }
-                        }
-                    }
+            return updateMember
+        }
+    },
+    filterResponseByAuth(...args){
+        const [project, user_id] = args
+        const getProjectAuth = (_project, _user_id) => {
+            return strapi.service('api::project.project').clac_project_auth(_project,_user_id);
+        }
+            
+        let res = {}
+        const { read } = getProjectAuth(project, user_id);
+        console.log('getProjectAuth auth',read);
+        if(read){
+            return {
+                ...project,
+                auth: {
+                    read: true
                 }
-                const res = await mmapi.createPost(params);
-                if(res){
-                    let Resps = {
-                        message: '加入成功，请等待管理员核验后再访问项目'
-                    }
-                    return Resps
+            }
+        } else {
+            res = {
+                id: project.id,
+                name: project.name,
+                overviews: project.overviews,
+                auth: {
+                    read: false
                 }
             }
         }
+        return res
     }
   }));
   

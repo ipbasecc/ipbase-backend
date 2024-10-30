@@ -97,9 +97,11 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
         if(favorite_is_user_favorite) {
 
             const items_of_this_favorite = await strapi.service('api::favorite.favorite').findOne(favorite_id, {
-                populate: ['elements'],
+                populate: {
+                    elements: true
+                },
             });
-            const items_of_this_favorite_ids = items_of_this_favorite.elements.map(i => i.id);
+            const items_of_this_favorite_ids = items_of_this_favorite?.elements?.map(i => i.id);
 
             if(items_of_this_favorite_ids.includes(element_id)) {
                 // 关联内容给收藏夹
@@ -110,10 +112,8 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
                       }
                     }
                 });
-                console.log('从用户收藏夹',favorite_id,'中删除');
 
             } else {
-
                 await strapi.service('api::favorite.favorite').update(favorite_id, {
                     data: {
                         elements: {
@@ -124,15 +124,20 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
             };
 
             // 更新收藏总数
-            const element = await strapi.entityService.findOne('api::element.element', element_id, {
-                populate: ['favorite_by'],
+            const total = await strapi.db.query("api::favorite.favorite").count({
+                where: {
+                    elements: {
+                        id: element_id,
+                    },
+                }
             });
-            const favorite_count = element.favorite_by.length;
+            const favorite_count = total;
 
-            const updatedElement = await strapi.entityService.update('api::element.element',
-                element_id,
-                {data: {favorite_count: favorite_count}}
-            );
+            const updatedElement = await strapi.entityService.update('api::element.element',element_id,{
+                data: {
+                    favorite_count: favorite_count
+                }
+            });
             const new_favorite_count = updatedElement.favorite_count;
 
             // 找收藏夹： 1. 包含当前内容；2. 所有者是当前用户
@@ -140,7 +145,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
                 filters: {
                     elements: {
                         id: {
-                            $contains: element_id,
+                            $eq: element_id,
                         },
                     },
                     owner: {
@@ -148,7 +153,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
                             $eq: user_id
                         }
                     }
-                    },
+                },
             });
             const favorites_has_this_element_Ids = favorites_has_this_element.map(i => i.id);
             return { favorites_has_this_element_Ids, new_favorite_count };

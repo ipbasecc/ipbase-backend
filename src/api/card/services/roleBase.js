@@ -123,6 +123,10 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
+                                "modify": true
                             }
                         ]
                     },
@@ -373,6 +377,10 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
+                                "modify": true
                             }
                         ]
                     },
@@ -622,7 +630,11 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
-                                "modify": true
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
+                                "modify": false
                             }
                         ]
                     },
@@ -873,6 +885,10 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
+                                "modify": true
                             }
                         ]
                     },
@@ -1122,6 +1138,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": true
                             }
                         ]

@@ -22,7 +22,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         } else {
             user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
         }
         if(!channel_id) {
@@ -152,15 +152,15 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         }
 
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
         }
         if(!data){
-            ctx.throw(401, '请提供必要的数据以便创建频道')
+            ctx.throw(403, '请提供必要的数据以便创建频道')
         }
         // console.log('data',data);
         let auth  = await strapi.service('api::team.team').getRole(user_id,team_id,'channel');
@@ -174,6 +174,10 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             }
             const create = await strapi.service('api::team.team').createChannel(user_id,team_id,params);
             if(create){
+                strapi.$publish('channel:channel_created', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    data: create
+                });
                 return create
             }
         }
@@ -184,31 +188,36 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         // @ts-ignore
         const { data, channel_id } = ctx.request.body;
         if(!channel_id){
-            ctx.throw(401, '需要频道ID')
+            ctx.throw(403, '需要频道ID')
         }
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
         }
         if(!data){
-            ctx.throw(401, '请提供必要的数据以便创建频道')
+            ctx.throw(403, '请提供必要的数据以便创建频道')
         }
 
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
         // console.log('channel',channel);
         let auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
         if(auth.modify) {
+            const team_id = channel.team?.id
             const mmapi = strapi.plugin('mattermost').service('mmapi');
             let params = {};
+            // console.log(data)
             if(data.type){
                 params.type = data.type
             }
             if(data.purpose){
                 params.purpose = data.purpose
+            }
+            if(data.jsonContent){
+                params.jsonContent = data.jsonContent
             }
             if(data.name){
                 params.name = data.name;
@@ -239,6 +248,10 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                 data: params
             })
             if(update){
+                strapi.$publish('channel:channel_updated', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    data: update
+                });
                 return update
             }
         }
@@ -254,7 +267,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         } else {
             user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
         }
         if(!channel_id) {
@@ -264,6 +277,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         let channelAuth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
         let teamAuth  = await strapi.service('api::team.team').getRole(user_id,channel.team.id,'channel');
         if(channelAuth.delete || teamAuth.delete){
+            const team_id = channel.team?.id
             const mmapi = strapi.plugin('mattermost').service('mmapi');
             await mmapi.deleteChannel(channel.mm_channel?.id);
             const remove = await strapi.entityService.delete('api::team-channel.team-channel',channel_id);
@@ -272,6 +286,10 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     message: '频道已删除',
                     channel_id: channel.id
                 }
+                strapi.$publish('channel:channel_deleted', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    data: msg
+                });
                 return msg
             }
         }
@@ -279,17 +297,21 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
     async genInvite(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id) {
+            ctx.throw(401, '您无权访问该数据')
+        }
         let { channel_id } = ctx.params;
         channel_id = Number(channel_id);
         const data = ctx.request.body
         
+        const authField = 'invite_uris'
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
-        let auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel','invite_uris');
+        let auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel', authField);
         if(auth.isBlock){
-            ctx.throw(401, '您无权邀请成员')
+            ctx.throw(403, '您无权邀请成员')
         }
           
-        if(auth.field) {
+        if(auth[authField]) {
             const makeid = (length) => {
                 let result = '';
                 const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -334,7 +356,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             }
 
         } else {
-            ctx.throw(401, '您无权邀请成员')
+            ctx.throw(403, '您无权邀请成员')
         }
     },
     async visitInvite(ctx) {
@@ -346,11 +368,11 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             return
         }
         if(!channel_id) {
-            ctx.throw(401, '缺少频道ID')
+            ctx.throw(403, '缺少频道ID')
             return
         }
         if(!invite_code) {
-            ctx.throw(401, '缺少邀请码')
+            ctx.throw(403, '缺少邀请码')
             return
         }
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
@@ -379,7 +401,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
 
                 if(invite.max_total === invite.was_inviteds.length) {
                     invite.enable = false; // todo 待验证
-                    // ctx.throw(401, '该邀请链接已超过使用次数');
+                    // ctx.throw(403, '该邀请链接已超过使用次数');
                     const res = {
                         error: {
                             message: '该邀请链接已超过使用次数'
@@ -387,7 +409,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     }
                     return res
                 } else if(invite.up_time && endTimeStamp < currentTimeStamp) {
-                    // ctx.throw(401, '该邀请链接已过保质期');
+                    // ctx.throw(403, '该邀请链接已过保质期');
                     const res = {
                         error: {
                             message: '邀请码已过有效期'
@@ -410,7 +432,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             }
 
             if(auth.isBlock){
-                ctx.throw(401, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
+                ctx.throw(403, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
             } else {
                 let __ = channel.invite_uris.find(i => i.invite_code == invite_code)
                 let res = {
@@ -434,7 +456,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         }
         const { channel_id, invite_code } = ctx.params;
         if(!channel_id) {
-            ctx.throw(401, '频道ID不能缺少')
+            ctx.throw(403, '频道ID不能缺少')
         }
         let isInvitor;
         let isUnconfirmed;
@@ -480,10 +502,10 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
 
                 if(invite.max_total === invite.was_inviteds.length) {
                     invite.enable = false; // todo 待验证
-                    ctx.throw(401, '该邀请链接已超过使用次数');
+                    ctx.throw(403, '该邀请链接已超过使用次数');
                     return
                 } else if(invite.up_time && endTimeStamp < currentTimeStamp) {
-                    ctx.throw(401, '该邀请链接已过保质期');
+                    ctx.throw(403, '该邀请链接已过保质期');
                     return
                 }
             }
@@ -497,7 +519,7 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             }
 
             if(auth.isBlock){
-                ctx.throw(401, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
+                ctx.throw(403, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
             }
         }
         if(invite) {
@@ -523,6 +545,16 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     },
                     member_roles: {
                         connect: [ unconfirmed_memberRole ]
+                    }
+                },
+                populate: {
+                    by_user: {
+                        fields: ['id','username','mm_profile'],
+                    },
+                    member_roles: {
+                        populate: {
+                            fields_permission: true
+                        }
                     }
                 }
             })
@@ -587,6 +619,13 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                             let Resps = {
                                 message: '加入成功，请等待管理员核验后再访问频道'
                             }
+                            strapi.$publish('channel:member_join', [`team_room_${team.id}`], {
+                                team_id: team.id,
+                                data: {
+                                    channel_id: channel_id,
+                                    joined_member: addMemberToChannel
+                                }
+                            });
                             return Resps
                         }
                     }
@@ -597,6 +636,9 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
     async removeUser(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id) {
+            ctx.throw(401, '您无权访问该数据')
+        }
         const { channel_id } = ctx.params;
         const body = ctx.request.body
         // @ts-ignore
@@ -628,21 +670,19 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel','manageMember');
 
             if(auth?.isBlock){
-                ctx.throw(401, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
+                ctx.throw(403, '您已被频道管理员屏蔽，如需申诉，请联系管理员')
             }
         }
 
         if(auth) {
+            const team_id = channel.team?.id
             const mmapi = strapi.plugin('mattermost').service('mmapi');
             const mm_channel = channel.mm_channel;
             // @ts-ignore
             const mm_user_id = member.by_user?.mm_profile?.id;
 
             let response = {}
-            // “待确认”成员，要么一直没被转正，就一直不会在Mattermost频道中，要么被重新“待确认”，那在当时就已经被移出了Mattermost频道频道
-            // 因此，如果将要移除的成员不是“待确认”身份，那么先将其移出Mattermost频道频道
-            // @ts-ignore
-            if(!auth.unconfirmed){
+            if(mm_channel.type !== 'O'){
                 await mmapi.RemoveUserFromChannel(mm_channel.id,mm_user_id);
             }  
             const leave = await strapi.entityService.update('api::team-channel.team-channel',channel_id, {
@@ -652,15 +692,30 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     }
                 }
             })
+            const all_channelRoles_ids = channel.member_roles.map(i => i.id);
+            await strapi.entityService.update('api::member.member', removeMember_id, {
+                data: {
+                    member_roles: {
+                        disconnect: all_channelRoles_ids
+                    }
+                }
+            })
             if(leave){
                 response.leave = {
                     removedUser: user_id_by_willRemove
                 }
+                strapi.$publish('channel:member_leaved', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    data: {
+                        channel_id: channel_id,
+                        leaved_member_id: removeMember_id
+                    }
+                });
             }        
             return response
 
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
     },
     async setRole(ctx) {
@@ -672,23 +727,26 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
         // console.log(body);
 
         if(!user_id) {
-            ctx.throw(401, '无效的登陆用户ID')
+            ctx.throw(401, '请先登陆')
         }
         if(!channel_id) {
-            ctx.throw(401, '需要提供频道ID')
+            ctx.throw(403, '需要提供频道ID')
         }
         if(!body.member_id) {
-            ctx.throw(401, '需要提供用成员ID')
+            ctx.throw(403, '需要提供用成员ID')
         }
         if(!body.new_roles) {
-            ctx.throw(401, '需要提供用户ID')
+            ctx.throw(403, '需要提供用户ID')
         }
 
 
         let auth;
+        let unconfirmed_role
+        let blocked_role
+        const authField = 'manageMember'
         const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
         if(channel){
-            auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel','manageMember');
+            auth  = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel',authField);
             
             if(auth.isBlock){
                 auth = false
@@ -699,10 +757,13 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             } else if(auth.unconfirmed){
                 auth = false
                 return '您无权执行此操作'
-            }            
+            }
+            
+            unconfirmed_role = channel.member_roles.find(i => i.subject === 'unconfirmed');
+            blocked_role = channel.member_roles.find(i => i.subject === 'blocked');
         }
 
-        if(auth?.field) {
+        if(auth[authField]) {
             // *** 注意：用户在同意加入时，已经将其拉入到了Mattermost team，或者channel中了，因此在此处确认时，不需要执行Mattermost中的更新
             const member_id = Number(body.member_id);
             // 如果用户在team中是未确认状态，那么在频道中将其设置为其它角色时，同时将其在team中的角色设置为“成员”
@@ -722,16 +783,21 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
             // *****
             // *****
             
-            const userMember = channel.members.find(i => i.id === member_id);
+            const userMember = team.members.find(i => i.id === member_id);
             const all_userRoles = userMember.member_roles.map(i => i.id);
             // console.log('all_userRoles',all_userRoles);
             const all_channelRoles = channel.member_roles.map(i => i.id);
             // console.log('all_projectRoles',all_projectRoles);
             const role_notBelongChannel = all_userRoles.filter(i => !all_channelRoles.includes(i));
             
+            // 在团队中是待审核成员
             const isUnconfirmedInTeam = team.members.some(i => i.by_user.id === user_id && i.member_roles.some(j => j.subject === 'unconfirmed'));
-            // 频道角色不存在“待确认”状态，因此不需要判断新设角色是不是“待确认”
-            if(isUnconfirmedInTeam){
+            // 要将成员设置为待审核状态
+            const setUnconfirmed = body.new_roles.includes(unconfirmed_role?.id)
+            // 要拉黑成员
+            const setBlocked = body.new_roles.includes(blocked_role?.id)
+            // 不拉黑、不设为待审核，但，成员在团队中还是“待审核”时，将成员在团队中的角色设置成“成员”
+            if(isUnconfirmedInTeam && !setUnconfirmed && !setBlocked){
                 // 获取团队中角色：“成员”
                 const memberRole_of_team = team.member_roles.find(i => i.subject === 'member');
                 const unconfirmed_memberRole_team = team.member_roles.find(i => i.subject === 'unconfirmed');
@@ -744,6 +810,19 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                         }
                     }
                 })
+            }
+            if(channel.mm_channel?.type !== 'O' && !setUnconfirmed && !setBlocked){
+                // 处理Mattermost频道
+                const mmapi = strapi.plugin('mattermost').service('mmapi');
+                let params = {
+                    // @ts-ignore
+                    "channel_id": channel?.mm_channel.id,
+                    // @ts-ignore
+                    "user_id": userMember.by_user?.mm_profile?.id,
+                  }
+                //   console.log('params',params);
+                // @ts-ignore
+                await mmapi.addMemberToChannel(channel?.mm_channel.id,params);
             }
             const update_member = await strapi.entityService.update('api::member.member',member_id,{
                 data: {
@@ -769,8 +848,63 @@ module.exports = createCoreController('api::team-channel.team-channel',({strapi}
                     }
                 }
             })
-            if(update_member){
-                return update_member
+            let update_channel = await strapi.entityService.update('api::team-channel.team-channel',channel_id, {
+              data: {
+                  members: {
+                      connect: [member_id]
+                  }
+              },
+              populate: {
+                    members: {
+                        populate: {
+                            by_user: {
+                                fields: ['id','username','mm_profile'],
+                            },
+                            member_roles: {
+                                fields: ['id','subject']
+                            }
+                        }
+                    },
+                    member_roles: {
+                        populate: {
+                            ACL: {
+                                populate: {
+                                    fields_permission: true
+                                }
+                            }
+                        }
+                    },
+                }
+            })
+            if(update_channel){
+                const team_id = channel.team?.id
+                const auth = await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
+                // console.log('auth', auth)
+                if(auth?.read){
+                    update_channel = {
+                        ...update_channel,
+                        auth: {
+                            read: true
+                        }
+                    }
+                } else {
+                    update_channel = {
+                        id: update_channel.id,
+                        name: update_channel.name,
+                        type: update_channel.type || update_channel.mm_channel?.type,
+                        mm_channel: {
+                            id: update_channel.mm_channel.id,
+                            type: update_channel.mm_channel.type
+                        },
+                        auth: auth
+                    }
+                }
+                strapi.$publish('channel:member_updated', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    data: update_channel
+                });
+                
+                return update_channel
             }
         }
     },

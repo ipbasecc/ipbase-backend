@@ -201,6 +201,31 @@ module.exports = {
                     },
                 ]
             },
+            "blocked": {
+                "collection": "schedule_event",
+                "create": false,
+                "delete": false,
+                "read": false,
+                "modify": false,
+                "fields_permission": [
+                    {
+                        "field": "subject",
+                        "modify": false
+                    },
+                    {
+                        "field": "time",
+                        "modify": false
+                    },
+                    {
+                        "field": "location",
+                        "modify": false
+                    },
+                    {
+                        "field": "description",
+                        "modify": false
+                    },
+                ]
+            },
         }
 
         return _ACL

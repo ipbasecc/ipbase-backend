@@ -169,8 +169,10 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
             params.kanban = {
                 set: [kanban_id]
             }
-        }
-        if(card_id){
+            params.user = {
+                set: [user_id]
+            };
+        } else if(card_id){
             params.card =  {
                 set: [card_id]
             }
@@ -242,6 +244,14 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         if(auth){
             let res = await create_todogroupFn();
             if(res) {
+                if(card_id){
+                    let response = {
+                        team_id: ctx.default_team?.id,
+                        card_id: card_id,
+                        data: res
+                    }
+                    strapi.$publish('todogroup:created', [ctx.room_name], response);
+                }
                 return res
             }
         }
@@ -257,10 +267,6 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         };
         if(!user_id) {
             return ctx.response.status = 401;
-        } else {
-            params.creator = {
-                set: [user_id]
-            };
         }
         if(data.color_marker){
             params.color_marker = data.color_marker
@@ -295,7 +301,7 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
                 // console.log('members 111',members);
                 calc_auth(members,member_roles);
             } else {
-                const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
+                const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(_card.id);
                 if(belongedInfo){
                     let members;
                     if(belongedInfo.belonged_card){
@@ -360,14 +366,29 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
             let update_todogroup = await strapi.entityService.update('api::todogroup.todogroup', todogroup_id, {
                 data: params,
                 populate: {
+                    todos: {
+                        populate: {
+                            attachment: {
+                                fields: ['id','ext','url']
+                            }
+                        }
+                    },
                     kanban: {
                         fields: ['id']
                     }
                 }
             });
+            if(props?.card_id){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    card_id: props.card_id,
+                    data: update_todogroup
+                }
+                strapi.$publish('todogroup:updated', [ctx.room_name], response);
+            }
             return update_todogroup
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         };
     },
     async delete(ctx) {
@@ -447,6 +468,16 @@ module.exports = createCoreController('api::todogroup.todogroup', ({strapi}) => 
         if(auth){
             let _delete = await strapi.entityService.delete('api::todogroup.todogroup', todogroup_id);
             if(_delete) {
+                if(todogroup?.card){
+                    let response = {
+                        team_id: ctx.default_team?.id,
+                        card_id: todogroup.card.id,
+                        data: {
+                            removed_todogroup_id: todogroup_id
+                        }
+                    }
+                    strapi.$publish('todogroup:removed', [ctx.room_name], response);
+                }
                 return '待办分组已删除'
             }
         } else {

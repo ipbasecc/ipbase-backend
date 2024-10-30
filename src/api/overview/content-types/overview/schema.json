@@ -50,6 +50,15 @@
       "relation": "manyToOne",
       "target": "api::card.card",
       "inversedBy": "overviews"
+    },
+    "mps_info": {
+      "type": "json"
+    },
+    "marker_todos": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::todo.todo",
+      "mappedBy": "by_overview"
     }
   }
 }

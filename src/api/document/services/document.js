@@ -22,16 +22,24 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                     fields: ['id']
                 },
                 creator: {
-                    fields: ['id', 'mm_profile']
+                    fields: ['id','username', 'mm_profile'],
+                    profile: {
+                        populate: {
+                            avatar: {
+                                fields: ['id','url','ext']
+                            }
+                        }
+                    }
+                },
+                by_course: {
+                    fields: ['id']
                 }
             }
         })
         if(document){
             // console.log('document service document', document)
             let belongedInfo = {};
-            if(document.by_user?.id){
-                belongedInfo.user_id = document.by_user.id
-            }
+            belongedInfo.user_id = document.by_user?.id || document.creator?.id
             if(document.by_project?.id){
                 const project_id = document.by_project.id;
                 const project = await strapi.service('api::project.project').find_projectByID(project_id)
@@ -50,6 +58,8 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                     }
                 }
             }
+            belongedInfo.document = document
+            // console.log('belongedInfo', belongedInfo)
             return belongedInfo
         }
     },
@@ -58,17 +68,24 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
         const [ data, fields_permission, props ] = args;
         let params = {};
         if(data.title) {
-            if(data.title && fields_permission.includes('title')) {
+            if(data.title && (fields_permission?.includes('title') || props.isCreator)) {
                 params.title = data.title
             } else {
-                ctx.throw(401,'您无权修改该文档标题')
+                ctx.throw(403,'您无权修改该文档标题')
+            }
+        }
+        if(data.cover) {
+            if(data.cover && (fields_permission?.includes('cover') || props.isCreator)) {
+                params.cover = data.cover
+            } else {
+                ctx.throw(403,'您无权修改该文档封面')
             }
         }
         if(data.jsonContent) {
-            if(data.jsonContent && fields_permission.includes('jsonContent')) {
+            if(data.jsonContent && (fields_permission?.includes('jsonContent') || props.isCreator)) {
                 params.jsonContent = data.jsonContent
             } else {
-                ctx.throw(401,'您无权修改该文档内容')
+                ctx.throw(403,'您无权修改该文档内容')
             }
         }
 
@@ -117,7 +134,6 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
         let members;
         const belongedInfo = await strapi.service('api::document.document').find_belongedInfo_byDocumentID(document_id);
         if(belongedInfo){
-            // console.log('document service belongedInfo', belongedInfo)
             if(belongedInfo.user_id === user_id){
                 auth = {
                     read: true,
@@ -126,8 +142,7 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                     remove: true,
                     isSelf: true
                 }
-            }
-            if(belongedInfo.project){
+            } else if(belongedInfo.project){
                 const project_id = belongedInfo.project.id
                 const project = await strapi.service('api::project.project').find_projectByID(project_id);
                 if(project){
@@ -142,8 +157,7 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                         
                     }
                 }
-            }
-            if(belongedInfo.card){
+            } else if(belongedInfo.card){
                 const card_id = belongedInfo.card.id
                 const card = await strapi.service('api::card.card').find_cardByID(card_id);
                 if(card){
@@ -178,14 +192,22 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                         }
                     }
                 }
+            } else {
+                auth = {
+                    read: false,
+                    create: false,
+                    modify: false,
+                    remove: false,
+                    isSelf: false
+                }
             }
         }
         
+        // console.log('belongedInfo', belongedInfo)
         if(auth){
-            return { auth, fields_permission }
+            const document = belongedInfo.document
+            return { auth, fields_permission, document }
         }
-        
-        
     },
     async find_document_byID(...args) {
         const [document_id] = args;
@@ -194,14 +216,27 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                 by_user: {
                     fields: ['id']
                 },
+                by_team: {
+                    fields: ['id']
+                },
                 by_project: {
                     fields: ['id']
                 },
                 by_card: {
                     fields: ['id']
                 },
-                creator: {
+                by_course: {
                     fields: ['id']
+                },
+                creator: {
+                    fields: ['id','username', 'mm_profile'],
+                    profile: {
+                        populate: {
+                            avatar: {
+                                fields: ['id','url','ext']
+                            }
+                        }
+                    }
                 }
             }
         })
@@ -213,9 +248,21 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
         let by_user_id;
         let authInfo = {};
         const document = await strapi.service('api::document.document').find_document_byID(document_id);
+        // console.log(document)
+        const auth = await strapi.service('api::document.document').find_authInfo_byDocument(document,user_id);
+        // console.log(auth)
+        return auth
+    },
+    async find_authInfo_byDocument(...args){
+        const [document, user_id] = args;
+        
+        // console.log(document)
+        let by_user_id;
+        let authInfo = {};
         if(document){
-            if(document.creator?.id === user_id){
+            if(document.creator?.id === user_id || document.by_user?.id === user_id){
                 authInfo.isCreator = true
+                return authInfo
             }
             const clac_auth_by_project = async (project_id,_collection) => {
                 let collection = !_collection ? 'document' : _collection
@@ -261,10 +308,31 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
 
                 }
             }
+            if(document.by_team){
+                const team_id = document.by_team.id;
+                const memberRoles = await strapi.service('api::member-role.member-role').findTeamRole(user_id, team_id);
+                
+                const role_names = memberRoles.map(i => i.subject);
+                const is_blocked = memberRoles.filter(i => i.subject === 'blocked')?.length > 0;
+                const is_unconfirmed = memberRoles.filter(i => i.subject === 'unconfirmed')?.length > 0;
+                const ACLs = memberRoles.map(j => j.ACL).flat(2);
+                const read = ACLs.filter(i => i.collection === 'news' && i.read)?.length > 0;
+                const create = ACLs.filter(i => i.collection === 'news' && i.create)?.length > 0;
+                const modify = ACLs.filter(i => i.collection === 'news' && i.modify)?.length > 0;
+                const remove = ACLs.filter(i => i.collection === 'news' && i.delete)?.length > 0;
+                const fields_permission = ACLs.filter(i => i.collection === 'news')?.map(j => j.fields_permission)?.flat(2).filter(k => k.modify)?.map(l => l.field);
+
+                authInfo = {
+                    read, create, modify, remove, is_blocked, is_unconfirmed, role_names, fields_permission
+                }
+                // console.log(authInfo)
+                return authInfo
+            }
             if(document.by_project){
                 const project_id = document.by_project.id;
                 let res = await clac_auth_by_project(project_id);
                 if(res) {
+                    // console.log(res)
                     return res
                 }
             }
@@ -272,6 +340,7 @@ module.exports = createCoreService('api::document.document',({strapi}) => ({
                 const card_id = document.by_card.id;
                 let res = await clac_auth_by_card(card_id);
                 if(res) {
+                    // console.log(res)
                     return res
                 }
             }

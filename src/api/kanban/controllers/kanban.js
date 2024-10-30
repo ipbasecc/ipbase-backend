@@ -109,7 +109,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             title: data?.title,
             status: 'pending',
             // @ts-ignore
-            type: data?.type || 'todo',
+            type: data?.type || 'kanban',
             publishedAt: iso,
             group: group_id,
             creator: user_id
@@ -123,6 +123,12 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
         })
 
         if(newKanban) {
+            const response = {
+                team_id: ctx.default_team?.id,
+                group_id: group_id,
+                data: newKanban
+            }
+            strapi.$publish('kanban:created', [ctx.room_name], response);
             return newKanban
         } else {
             ctx.throw(400, '发生未知错误，请刷新页面重新尝试');
@@ -134,7 +140,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
         const { id } = ctx.params;
         let kanban_id = Number(id);
         // @ts-ignore
-        const { data } = ctx.request.body
+        const { data, __props } = ctx.request.body
         // console.log('ctx.request.body',ctx.request.body);
         if(!kanban_id) {
             ctx.throw(500, '需要提供看板ID')
@@ -192,9 +198,17 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
                     columns: true
                 }
             })
-
             if(updateKanban) {
-                const processed_data = strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(updateKanban, user_id, ACL, isSuper_member);
+                const processed_data = await strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(updateKanban, user_id, ACL, isSuper_member);
+                // console.log('processed_data',processed_data);
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    data: processed_data
+                }
+                if(__props?.order?.length > 0){
+                    response.order = __props?.order
+                }
+                strapi.$publish('kanban:updated', [ctx.room_name], response);
                 return processed_data
             } else {
                 ctx.throw(400, '发生未知错误，请刷新页面重新尝试');
@@ -247,7 +261,14 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             const remove = await strapi.service('api::kanban.kanban').remove_kanban_rf(kanban_id);
 
             if(remove) {
-                return remove
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_kanban: kanban_id
+                    }
+                }
+                strapi.$publish('kanban:deleted', [ctx.room_name], response);
+                return response
             } else {
                 ctx.throw(400, '发生未知错误，请刷新页面重新尝试');
                 return

@@ -49,6 +49,9 @@
     "disable_share": {
       "type": "boolean",
       "default": false
+    },
+    "mps_info": {
+      "type": "json"
     }
   }
 }

@@ -47,28 +47,33 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
             ctx.throw(401, '您无权访问该数据')
         }
 
-        const { auth } = await strapi.service('api::document.document').calc_collection_auth(document_id,user_id);
+        const { auth, document } = await strapi.service('api::document.document').calc_collection_auth(document_id,user_id);
         // console.log('document findOne',auth);
         if(!auth?.read) {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         } else {
-            const document = await strapi.entityService.findOne('api::document.document', document_id,{
-                populate: {
-                    creator: {
-                        fields: ['id','username'],
-                        profile: {
-                            populate: {
-                                avatar: {
-                                    fields: ['id','url','ext']
+            if(document){
+                return document
+            } else {
+             const _document = await strapi.entityService.findOne('api::document.document', document_id,{
+                    populate: {
+                        creator: {
+                            fields: ['id','username'],
+                            profile: {
+                                populate: {
+                                    avatar: {
+                                        fields: ['id','url','ext']
+                                    }
                                 }
                             }
-                        }
+                        },
+                        by_course: true
                     }
+                });
+    
+                if(_document) {
+                    return _document
                 }
-            });
-
-            if(document) {
-                return document
             }
         }
 
@@ -82,12 +87,16 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
         let data = ctx.request.body.data;
         // console.log(ctx.request.body);
         if(!user_id) {
-            ctx.throw(401, '您无权访问该数据')
+            ctx.throw(403, '您无权访问该数据')
         }
+        if(!document_id) {
+            ctx.throw(403, '缺少文档ID')
+        }
+        
+        const document = await strapi.service('api::document.document').find_document_byID(document_id);
         // 如果有收到更新mm_thread的请求，直接从Mattermost读取当前document的thread并直接更新
         // 此处无须返回，前端Mattermost的thread并更新UI，这里只是更新Strapi中的数据，方便下次读取
         if(data?.mm_thread){
-            const document = await strapi.entityService.findOne('api::document.document', document_id);
             if(document?.id === document_id && document.mm_thread){
                 // @ts-ignore
                 const post_id = document.mm_thread?.id;
@@ -102,22 +111,43 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
                 }
             }
         }
-
-        const authInfo = await strapi.service('api::document.document').find_authInfo(document_id,user_id);
+        
+        const authInfo = await strapi.service('api::document.document').find_authInfo_byDocument(document,user_id);
         // console.log(authInfo);
         if(authInfo?.isCreator || authInfo?.modify) {
             let props = {}
+            props.isCreator = authInfo?.isCreator
             let params = strapi.service('api::document.document').process_updateDocument_params(data,authInfo.fields_permission,props);
-
+            let lockers_ids = document.lockers_ids || []
+            if(data.hasOwnProperty('is_locked')){
+                params.is_locked = data.is_locked
+            }
             const update = await strapi.entityService.update('api::document.document', document_id,{
                 data: params
             });
 
             if(update) {
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    updator: user_id,
+                    data: update
+                }
+                if(document.by_project){
+                    response.project_id = document.by_project.id
+                }
+                if(document.by_card){
+                    response.card_id = document.by_card.id
+                }
+                if(document.by_team){
+                    response.team_id = document.by_team.id
+                }
+                if(document.by_team || document.by_project || document.by_card){
+                    strapi.$publish('document:updated', [ctx.room_name], response);
+                }
                 return update
             }
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
 
     },
@@ -129,19 +159,24 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
         // @ts-ignore
         let card_id = Number(ctx.request.body.card_id);
         // @ts-ignore
+        let team_id = Number(ctx.request.body.team_id);
+        // @ts-ignore
         let data = ctx.request.body.data;
+        
+        let notebook_id = Number(ctx.request.body.notebook_id);
         // console.log(ctx.request.body);
         if(!user_id) {
-            ctx.throw(401, '您无权访问该数据')
+            ctx.throw(403, '您无权访问该数据')
         }
 
         let auth;
         let project;
         let card;
+        let team;
         const cala_auth = (members,member_roles,props) => {
             const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
             if(is_blocked){
-                ctx.throw(401, '您已被管理员屏蔽，请联系管理员申诉')
+                ctx.throw(403, '您已被管理员屏蔽，请联系管理员申诉')
             }
             if(props === 'root_project'){
                 const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'card_document');
@@ -189,6 +224,39 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
                 }
             }
         }
+        if(team_id){
+            const memberRoles = await strapi.service('api::member-role.member-role').findTeamRole(user_id, team_id);
+            // console.log('memberRoles', memberRoles)
+            if(memberRoles?.length > 0){
+                const roleNames = memberRoles.map(i => i.subject);
+                const isBlocked = roleNames.includes('blocked');
+                const isUnconfirmed = roleNames.includes('unconfirmed');
+                if(isBlocked){
+                    ctx.throw(403, '您已被管理员屏蔽')
+                }
+                if(isUnconfirmed){
+                    ctx.throw(403, '您尚未正式加入团队，请等待管理员审核')
+                }
+                const hasAuthsACLs = memberRoles.filter(i => i.subject !== 'blocked' && i.subject !== 'unconfirmed')?.map(j => j.ACL).flat(2);
+                // console.log('hasAuthsACLs', hasAuthsACLs)
+                const hasAuths = hasAuthsACLs.filter(i => i.collection === 'news' && i.create)
+                // console.log('hasAuths', hasAuths)
+                auth = hasAuths?.length > 0
+            } else {
+                ctx.throw(402, '您无权执行此操作')
+            }
+        }
+        if(notebook_id){
+            const notebook = await strapi.db.query('api::notebook.notebook').findOne({
+              where: {
+                  id: notebook_id,
+                  user: user_id
+              }
+            });
+            if(notebook){
+                auth = true
+            }
+        }
 
         if(!auth) {
             ctx.throw(403, '您无权执行此操作')
@@ -197,24 +265,37 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
             var iso = now.toISOString();
             let params = data;
             params.creator = user_id;
+            params.by_user = user_id;
             params.publishedAt = iso;
             if(card_id) {
                 params.by_card = card_id;
             } else if(project_id) {
                 params.by_project = project_id
-            } else {
-                params.by_user = user_id;
+            } else if(team_id) {
+                params.by_team = team_id
+            } else if(notebook_id) {
+                params.notebook = notebook_id
             }
+            if(!data.jsonContent){
+                params.jsonContent = {
+                    "type": "doc", "content": [ { "type": "paragraph" } ]
+                }
+            }
+            params.lockers_ids = [];
+            // console.log(params)
             const new_document = await strapi.entityService.create('api::document.document', {
                 data: params,
                 populate: {
+                    cover: {
+                        fields: ['id', 'ext', 'url']
+                    },
                     creator: {
                         fields: ['id','username'],
                         populate: {
                             profile: {
                                 populate: {
                                     avatar: {
-                                        fields: ['id','url','ext']
+                                        fields: ['id','ext','url']
                                     }
                                 }
                             }
@@ -224,7 +305,6 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
             });
 
             if(new_document) {
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
                 let mmChannel_id = void 0;
                 let params = {
                     "message": `${card_id ? '卡片' : '项目'}文档：${new_document.title}被创建`,
@@ -248,7 +328,9 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
                     params.props.strapi.data.project_id = project.id;
                 }
                 
+                let res
                 if(mmChannel_id){
+                    const mmapi = strapi.plugin('mattermost').service('mmapi');
                     params.channel_id = mmChannel_id
                     const mmMsg = await mmapi.createPost(params);
                     // console.log('mmMsg',mmMsg)
@@ -258,11 +340,26 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
                                 mm_thread: mmMsg.data
                             }
                         })
-                        return update
+                        res = update
                     }
                 } else {
-                    return new_document
+                    res = new_document
                 }
+                
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: res
+                }
+                if(project){
+                    response.project_id = project.id
+                }
+                if(card){
+                    response.card_id = card.id
+                }
+                if(project || card || team_id){
+                    strapi.$publish('document:created', [ctx.room_name], response);
+                }
+                return res
             }
         }
     },
@@ -272,19 +369,38 @@ module.exports = createCoreController('api::document.document',({strapi}) => ({
         let document_id = Number(ctx.params.id);
         // console.log(user_id,project_id,card_id,document_id);
         if(!user_id) {
-            ctx.throw(401, '您无权访问该数据')
+            ctx.throw(403, '您无权访问该数据')
         }
         
-        const authInfo = await strapi.service('api::document.document').find_authInfo(document_id,user_id);
-
-        if(!authInfo?.remove) {
-            ctx.throw(401, '您无权执行此操作')
-        } else {
+        const document = await strapi.service('api::document.document').find_document_byID(document_id);
+        const authInfo = await strapi.service('api::document.document').find_authInfo_byDocument(document, user_id);
+        // console.log(authInfo);
+        if(authInfo?.remove || authInfo.isCreator) {
             const remove = await strapi.entityService.delete('api::document.document', document_id);
 
             if(remove) {
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_document_id: document_id
+                    }
+                }
+                if(document.by_project){
+                    response.project_id = document.by_project.id
+                }
+                if(document.by_card){
+                    response.card_id = document.by_card.id
+                }
+                if(document.by_team){
+                    response.team_id = document.by_team.id
+                }
+                if(document.by_project || document.by_team || document.by_card){
+                    strapi.$publish('document:removed', [ctx.room_name], response);
+                }
                 return { removed: document_id}
             }
+        } else {
+            ctx.throw(403, '您无权执行此操作')
         }
 
     },

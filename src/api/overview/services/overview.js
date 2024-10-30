@@ -158,6 +158,11 @@ module.exports = createCoreService('api::overview.overview',({strapi}) => ({
         } else if(data.jsonContent && !fields_permission.includes('jsonContent')) {
             ctx.throw(402, '您无权修改概览详情内容');
         }
+        if(data.marker_todos && fields_permission.includes('marker_todos')) {
+            params.marker_todos = data.marker_todos
+        } else if(data.marker_todos && !fields_permission.includes('marker_todos')) {
+            ctx.throw(402, '您无权修改标记内容');
+        }
         // console.log( 'service',data,params)
 
         return params

@@ -48,5 +48,13 @@ module.exports = {
             //     "auth": true
             // }
         },
+        {
+            "method": "GET",
+            "path": "/teams/:team_id/documents",
+            "handler": "team.findTeamDocuments",
+            // "config": {
+            //     "auth": true
+            // }
+        },
     ]
 }

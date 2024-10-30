@@ -109,170 +109,231 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
 
         return params
     },
-    async get_kanbanSourceData_byID(...args){
-        const[ kanban_id ] = args;
-        const kanban = await strapi.entityService.findOne('api::kanban.kanban',kanban_id,{
-            populate: {
-                columns: {
-                    populate: {
-                        cards: {
+    column_populate(){
+        return {
+            cards: {
+                populate: {
+                    followed_bies: {
+                        fields: ['id','username'],
+                        populate: {
+                            profile: {
+                                fields: ['title'],
+                                populate: {
+                                    avatar: {
+                                        fields: ['ext','url']
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    card_members: {
+                        populate: {
+                            by_user: {
+                                fields: ['id','username','mm_profile'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id','url','ext']
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            member_roles: {
+                                fields: ['id','subject']
+                            }
+                        }
+                      },
+                    member_roles: {
+                        populate: {
+                            ACL: {
+                                populate: {
+                                    fields_permission: true
+                                }
+                            },
+                            members: {
                             populate: {
-                                followed_bies: {
-                                    fields: ['id','username'],
+                                by_user: {
+                                    fields: ['id','username','mm_profile'],
                                     populate: {
                                         profile: {
-                                            fields: ['title'],
                                             populate: {
                                                 avatar: {
-                                                    fields: ['ext','url']
+                                                    fields: ['id','url','ext']
                                                 }
                                             }
                                         }
                                     }
                                 },
-                                card_members: {
-                                    populate: {
-                                        by_user: {
-                                            fields: ['id','username','mm_profile'],
-                                            populate: {
-                                                profile: {
-                                                    populate: {
-                                                        avatar: {
-                                                            fields: ['id','url','ext']
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        member_roles: {
-                                            fields: ['id','subject']
-                                        }
-                                    }
-                                  },
-                                member_roles: {
-                                    populate: {
-                                        ACL: {
-                                            populate: {
-                                                fields_permission: true
-                                            }
-                                        },
-                                        members: {
-                                        populate: {
-                                            by_user: {
-                                                fields: ['id','username','mm_profile'],
-                                                populate: {
-                                                    profile: {
-                                                        populate: {
-                                                            avatar: {
-                                                                fields: ['id','url','ext']
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                        }
-                                        }
-                                    }
-                                },
-                                creator: {
-                                    fields: ['id']
-                                },
-                                overviews: {
-                                    populate: {
-                                        media: {
-                                            fields: ['ext','url']
-                                        }
-                                    }
-                                },
-                                storage: {
-                                    populate: {
-                                        files: {
-                                            fields: ['id','name','ext','url']
-                                        },
-                                        sub_folders: true,
-                                        creator: {
-                                            fields: ['id','username'],
-                                            populate: {
-                                                profile: {
-                                                    fields: ['title'],
-                                                    populate: {
-                                                        avatar: {
-                                                            fields: ['ext','url']
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        can_read_user: {
-                                            fields: ['id']
-                                        },
-                                        can_write_user: {
-                                            fields: ['id']
-                                        },
-                                    }
-                                },
-                                todogroups: {
-                                    populate: {
-                                        todos: {
-                                            populate: {
-                                                attachment: true
-                                            }
-                                        }
-                                    }
-                                },
-                                share_codes: {
-                                    populate: {
-                                        creator: {
-                                            fields: ['id','username'],
-                                        }
-                                    }
-                                }
+                            }
+                            }
+                        }
+                    },
+                    creator: {
+                        fields: ['id']
+                    },
+                    overviews: {
+                        populate: {
+                            media: {
+                                fields: ['id', 'ext','url']
                             }
                         },
-                        executor: {
-                            fields: ['id','mm_profile'],
+                        marker_todos: {
                             populate: {
-                                profile: {
-                                    populate: {
-                                        avatar: {
-                                            fields: ['ext','url']
-                                        },
-                                        brand: {
-                                            fields: ['ext','url']
-                                        },
-                                        cover: {
-                                            fields: ['ext','url']
-                                        },
-                                    }
-                                },
-                                user_channel: {
-                                    fields: ['id']
+                                attachment: {
+                                    fields: ['id', 'ext','url']
                                 }
                             }
-                        },
-                        creator: {
-                            fields: ['id']
+                        }
+                    },
+                    storage: {
+                        populate: {
+                            files: {
+                                fields: ['id','name','ext','url']
+                            },
+                            sub_folders: true,
+                            creator: {
+                                fields: ['id','username'],
+                                populate: {
+                                    profile: {
+                                        fields: ['title'],
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id', 'ext','url']
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            can_read_user: {
+                                fields: ['id']
+                            },
+                            can_write_user: {
+                                fields: ['id']
+                            },
+                        }
+                    },
+                    todogroups: {
+                        populate: {
+                            todos: {
+                                populate: {
+                                    attachment: true
+                                }
+                            }
+                        }
+                    },
+                    share_codes: {
+                        populate: {
+                            creator: {
+                                fields: ['id','username'],
+                            }
                         }
                     }
+                }
+            },
+            executor: {
+                fields: ['id','mm_profile'],
+                populate: {
+                    profile: {
+                        populate: {
+                            avatar: {
+                                fields: ['ext','url']
+                            },
+                            brand: {
+                                fields: ['ext','url']
+                            },
+                            cover: {
+                                fields: ['ext','url']
+                            },
+                        }
+                    },
+                    user_channel: {
+                        fields: ['id']
+                    }
+                }
+            },
+            creator: {
+                fields: ['id']
+            }
+        }
+    },
+    async get_kanbanSourceData_byID(...args){
+        const[ kanban_id ] = args;
+        const column_populate = strapi.service('api::kanban.kanban').column_populate();
+        let kanban = await strapi.entityService.findOne('api::kanban.kanban',kanban_id,{
+            populate: {
+                columns: {
+                    populate: column_populate
                 }
             }
         })
         if(kanban){
+            async function processKanban(_kanban) {
+                _kanban.columns = await Promise.all(_kanban.columns.map(async (column) => {
+                  const updatedCards = await Promise.all(column.cards.map(async (card) => {
+                    const updatedOverviews = card.overviews?.length > 0
+                      ? await strapi.service('api::card.card').sync_mpsInfo(card.overviews)
+                      : card.overviews;
+                    return {
+                      ...card,
+                      overviews: updatedOverviews
+                    };
+                  }));
+                  return {
+                    ...column,
+                    cards: updatedCards
+                  };
+                }));
+                return kanban;
+            }
+            kanban = await processKanban(kanban)
             return kanban
         }
     },
     async process_KanbanSourceData_byAuth(...args) {
+        const ctx = strapi.requestContext.get();
         const [ kanban, user_id, ACL, isSuper_member, belongedInfo ] = args;
+        
+        const canShow = async (card) => {
+            const user_roles_inCard = await strapi.db.query('api::member-role.member-role').findMany({
+              where: {
+                by_card: card.id,
+                by_user: user_id,
+                subject: {
+                  $not: {
+                    $in: ['unconfirmed', 'blocked']
+                  }
+                }
+              }
+            });
+            return user_roles_inCard && user_roles_inCard.length > 0
+        }
+        let team_mode
+        if(ctx.default_team){
+            team_mode = ctx.default_team.config.mode || 'toMany';
+        }
         // 私有卡片 - 管理组和卡片关联用户可见
-        if(!isSuper_member) {
-            kanban.columns = kanban.columns.map(c => ({
-                ...c,
-                cards: c.executor?.id === user_id && (c.cards?.length > 0 && c.cards || [])
-                    || c.cards?.length > 0 && c.cards.filter(
-                        card => !card.private
-                        || card.card_members.map(member => member.by_user.id === user_id))
-                    || []
-            }))
+        if (!isSuper_member) {
+            kanban.columns = kanban.columns.map(c => {
+                // 确保c.cards是一个数组
+                const cardsArray = Array.isArray(c.cards) ? c.cards : [];
+                return {
+                    ...c,
+                    cards: cardsArray.length > 0 ? cardsArray.filter(card => {
+                        // 卡片不是私有的，并且团队模式是toMany
+                        if (!card.private && team_mode === 'toMany') {
+                            return true;
+                        } else {
+                            // 用户是卡片的成员之一，并且canShow函数返回true
+                            if (canShow(card)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }) : []
+                }
+            });
         }
 
         const { read:read_column_role, create:create_column_role, modify:modify_column_role, remove:remove_column_role } = strapi.service('api::project.project').calc_collection_auth(ACL,'column');
@@ -320,42 +381,6 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 return card;  
             }) : []
         }))
-        if(belongedInfo?.belonged_project?.by_team){
-            // console.log('belongedInfo.belonged_project.by_team', belongedInfo.belonged_project.by_team)
-            const canShow = (members, roles) => {
-                const membersInCard = members.filter(i => i.by_user.id === user_id && i.subject !== 'unconfirmed' && i.subject !== 'blocked')
-                // console.log('membersInCard', membersInCard)
-                if(!members || !membersInCard?.map(i => i.by_user.id)?.includes(user_id)){
-                    return false
-                }
-                const rolesByFilters = membersInCard.map(i => i.member_roles?.map(j => j.id))?.flat(2);
-                const rolesIds = roles.map(j => j.id);
-                function hasIntersection(arr1, arr2) {
-                  const set1 = new Set(arr1);
-                  for (const num of arr2) {
-                    if (set1.has(num)) {
-                      return true; // 找到交集，返回true
-                    }
-                  }
-                  return false; // 没有找到交集，返回false
-                }
-                
-                return hasIntersection(rolesByFilters, rolesIds)
-            }
-            const _by_team_id = belongedInfo.belonged_project.by_team.id;
-            const team = await strapi.entityService.findOne('api::team.team', _by_team_id);
-            // console.log('team', team)
-            if(team){
-                const team_mode = team.config?.mode || 'toMany';
-                
-                if(team_mode === 'toOne'){
-                    kanban.columns = kanban.columns.map(column => ({
-                        ...column,
-                        cards: column.cards?.length > 0 ? column.cards.filter(card => canShow(card.card_members, card.member_roles)) : []
-                    }))
-                }
-            }
-        }
 
         return kanban
     },

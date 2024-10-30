@@ -142,12 +142,6 @@
     "self_tags": {
       "type": "json"
     },
-    "created_elements": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::element.element",
-      "mappedBy": "creator"
-    },
     "messages": {
       "type": "relation",
       "relation": "oneToMany",
@@ -316,8 +310,7 @@
     "default_team": {
       "type": "relation",
       "relation": "oneToOne",
-      "target": "api::team.team",
-      "inversedBy": "default_by"
+      "target": "api::team.team"
     },
     "initialization": {
       "type": "boolean",
@@ -325,6 +318,42 @@
     },
     "feature_key": {
       "type": "string"
+    },
+    "created_elements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::element.element",
+      "mappedBy": "creator"
+    },
+    "contact": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::contact.contact",
+      "inversedBy": "owner"
+    },
+    "by_contacts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::contact.contact",
+      "mappedBy": "contacters"
+    },
+    "wasBlockeds": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::contact.contact",
+      "mappedBy": "blockeds"
+    },
+    "ledgers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::ledger.ledger",
+      "mappedBy": "authorizer"
+    },
+    "notebooks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::notebook.notebook",
+      "mappedBy": "user"
     }
   }
 }

@@ -35,6 +35,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": true
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": true
                             }
                         ]
                     },
@@ -44,6 +48,27 @@ module.exports = {
                         "delete": true,
                         "read": true,
                         "modify": true
+                    },
+                    {
+                        "collection": "news",
+                        "create": true,
+                        "delete": true,
+                        "read": true,
+                        "modify": true,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": true
+                            },
+                            {
+                                "field": "cover",
+                                "modify": true
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": true
+                            }
+                        ]
                     }
                 ]
             },
@@ -81,6 +106,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
                             }
                         ]
                     },
@@ -90,6 +119,27 @@ module.exports = {
                         "delete": false,
                         "read": true,
                         "modify": false
+                    },
+                    {
+                        "collection": "news",
+                        "create": false,
+                        "delete": false,
+                        "read": true,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "cover",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            }
+                        ]
                     }
                 ]
             },
@@ -127,6 +177,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
                             }
                         ]
                     },
@@ -136,6 +190,27 @@ module.exports = {
                         "delete": false,
                         "read": false,
                         "modify": false
+                    },
+                    {
+                        "collection": "news",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "cover",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            }
+                        ]
                     }
                 ]
             },
@@ -173,6 +248,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
                             }
                         ]
                     },
@@ -182,6 +261,27 @@ module.exports = {
                         "delete": false,
                         "read": false,
                         "modify": false
+                    },
+                    {
+                        "collection": "news",
+                        "create": false,
+                        "delete": false,
+                        "read": false,
+                        "modify": false,
+                        "fields_permission": [
+                            {
+                                "field": "title",
+                                "modify": false
+                            },
+                            {
+                                "field": "cover",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
+                            }
+                        ]
                     }
                 ]
             },

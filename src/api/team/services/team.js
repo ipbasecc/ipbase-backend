@@ -6,7 +6,7 @@
 
 const { createCoreService } = require('@strapi/strapi').factories;
 
-module.exports = createCoreService('api::team.team',({strapi}) => ({
+module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
     populate_template(){
         const populate = {
             members: {
@@ -20,6 +20,9 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
                                         fields: ['id','url','ext']
                                     }
                                 }
+                            },
+                            contact: {
+                                fields: ['id','accept_friend','friend_request_question']
                             }
                         }
                     },
@@ -141,35 +144,31 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
     },
     async getRole(...args) {
         const [ user_id, team_id, collection, field ] = args;
-        let auth = {
-        }
-        const team = await strapi.entityService.findOne('api::team.team',team_id,{
-            populate: {
-                members: {
-                    fields: ['id'],
+        let auth = {}
+        const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
+          where: {
+            members: {
+                by_user: {
+                    id: user_id
+                }
+            },
+            by_team: {
+                id: team_id
+            }
+          },
+          populate: {
+                ACL: {
                     populate: {
-                        by_user: {
-                            fields: ['id']
-                        },
-                        member_roles: {
-                            populate: {
-                                ACL: {
-                                    populate: {
-                                        fields_permission: true
-                                    }
-                                }
-                            }
-                        }
+                        fields_permission: true
                     }
                 }
             }
-        })
-        if(team){
-            const roles = team.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2);
-            if(roles?.length === 0){
+        });
+        if(memberRoles){
+            if(memberRoles?.length === 0){
                 return false
             }
-            const _ACLs = roles?.map(i => i.ACL).flat(2)?.filter(j => j.collection === collection).flat(2);
+            const _ACLs = memberRoles?.map(i => i.ACL).flat(2)?.filter(j => j.collection === collection).flat(2);
             // @ts-ignore
             auth = {
                 create: _ACLs.filter(i => i.create)?.length > 0,
@@ -179,10 +178,10 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
             }
             if(field){
                 const _field = _ACLs.map(i => i.fields_permission)?.flat(2)?.filter(j => j.field === field && j.modify)
-                auth.field = _field?.length > 0 // 鉴定提供的字段是否是modify
+                auth[field] = _field?.length > 0 // 鉴定提供的字段是否是modify
             }
-            const blocks = team.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2).filter(k => k.subject === 'blocked');
-            const unconfirmeds = team.members?.filter(i => i.by_user.id === user_id).map(j => j.member_roles).flat(2).filter(k => k.subject === 'unconfirmed');
+            const blocks = memberRoles.filter(k => k.subject === 'blocked');
+            const unconfirmeds = memberRoles.filter(k => k.subject === 'unconfirmed');
             auth.isBlock = blocks?.length > 0
             auth.unconfirmed = unconfirmeds?.length > 0
         }
@@ -292,8 +291,13 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
                     },
                   },
                 ],
-            }}
-        )
+            },
+            populate: {
+                by_user: {
+                    fields: ['id']
+                }
+            }
+        })
         if(_team_member?.length > 0){
             return _team_member[0]
         } else {
@@ -330,6 +334,7 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
     // 根据用户权限，对返回的数据执行过滤
     async filterByAuth(...args) {
         let [ team, user_id ] = args;
+        const curUserMember = team.members.find(i => i.by_user.id === user_id)
         const getChannelAuth = async (channel_id) => {
             return await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
         }
@@ -340,6 +345,51 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
 
         // @ts-ignore
         if(team.team_channels?.length > 0){
+            // 找到所有公开频道
+            const unjoined_public_channels = team.team_channels.filter(i => !i.members?.map(j => j.id).includes(curUserMember.id) && i.mm_channel.type === 'O');
+            // console.log('public_channels', curUserMember.id, public_channels)
+            if(unjoined_public_channels?.length > 0){
+                await Promise.allSettled(unjoined_public_channels.map(async(channel) => {
+                    // 如果成员不在公开频道中，加入
+                    await strapi.entityService.update('api::team-channel.team-channel', channel.id, {
+                        data: {
+                            members: {
+                                connect: [curUserMember.id]
+                            }
+                        }
+                    })
+                    // 更新team数据
+                    team.team_channels.find(i => i.id === channel.id).members.push(curUserMember)
+                    // 找到当前频道 member 角色
+                    const member_role = channel.member_roles.find(i => i.subject === 'member');
+                    // 将刚刚加入的成员角色设置为 member
+                    await strapi.entityService.update('api::member-role.member-role', member_role.id, {
+                        data: {
+                            members: {
+                                connect: [curUserMember.id]
+                            }
+                        }
+                    })
+                    // 更新team数据
+                    team.team_channels.find(i => i.id === channel.id).member_roles.find(j => j.subject === 'member')?.members.push(curUserMember)
+                    const mmapi = strapi.plugin('mattermost').service('mmapi');
+                    
+                    // 同时加入到 Mattermost 频道
+                    const mm_channel = channel.mm_channel
+                    let joined_user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id)
+                    if(mm_channel){
+                        let params = {
+                            "channel_id": mm_channel.id,
+                            // @ts-ignore
+                            "user_id": joined_user.mm_profile?.id,
+                          }
+                        //   console.log('params',params);
+                        await mmapi.addMemberToChannel(mm_channel.id,params);
+                    }
+                }))
+            }
+            // team = await strapi.service('api::team.team').findTeamByID(team.id);
+            team.team_channels = team.team_channels.filter(i => i.members?.map(j => j.id).includes(curUserMember.id));
             // @ts-ignore
             team.team_channels = await Promise.all(team.team_channels.map(async(i) => {
                 let res = {}
@@ -372,8 +422,30 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
             // @ts-ignore
             team.projects = await Promise.all(team.projects.map(async(i) => {
                 let res = {}
-                const { read } = await getProjectAuth(i.id);
-                // console.log('getProjectAuth auth',read);
+                let { read } = await getProjectAuth(i.id);
+                // console.log('getProjectAuth read 1',read);
+                const role_of_project = await strapi.db.query('api::member-role.member-role').findMany({
+                    where: {
+                        members: {
+                            by_user: user_id
+                        },
+                        by_project: i.id
+                    },
+                    populate: {
+                        ACL: true
+                    }
+                })
+                if(role_of_project?.length > 0){
+                    const ACLs = role_of_project.map(i => i.ACL).flat(2)
+                    const collections = ACLs.filter(j => j.collection === 'project')
+                    // console.log('ACLs',ACLs);
+                    const canRead = collections.filter(i => i.read === true)
+                    // console.log('canRead',canRead);
+                    read = canRead?.length > 0
+                } else {
+                    read = false
+                }
+                // console.log('getProjectAuth read 2',read);
                 if(read){
                     return {
                         ...i,
@@ -470,5 +542,78 @@ module.exports = createCoreService('api::team.team',({strapi}) => ({
                 return res
             }
         }
+    },
+    getRoles_byMembers(...args) {
+        const [ user_id, members, member_roles ] = args;
+        
+        function hasIntersection(A, B) {
+          console.log('A', A)
+          console.log('B', B)
+          const setA = new Set(A);
+          const setB = new Set(B);
+          return [...setA].some(element => setB.has(element));
+        }
+        function getIntersection(A, B) {
+          // 将数组A和数组B转换为集合
+          const setA = new Set(A);
+          const setB = new Set(B);
+        
+          // 使用filter方法找出两个集合的共同元素
+          const intersection = [...setA].filter(element => setB.has(element));
+        
+          // 返回交集数组
+          return intersection;
+        }
+        // @ts-ignore
+        // 用户在团队中的成员
+        const user_members = members?.filter(i =>  i.by_user.id == user_id);
+        // 用户成员的所有角色
+        const user_memberRoles = user_members.map(i => i.member_roles).flat(2);
+        // 用户成员的所有角色ID
+        const user_memberRoles_ids = user_memberRoles.map(i => i.id);
+        // 团队角色ID
+        const _roles_ids = member_roles.map(i => i.id);
+        // 成员在团队中的角色ID（成员的角色ID 与 团队角色ID的交集）
+        const intersection = getIntersection(user_memberRoles_ids, _roles_ids);
+        // 用户在团队中所有角色
+        return user_memberRoles.filter(i => intersection.includes(i.id))
+    },
+    async getMemberRolesByTeam(...args){
+        const [user_id, team_id] = args;
+        const memberRoles_inTeam = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                by_team: team_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+    },
+    join(...args) {
+      const [ team_id ] = args;
+      // 使用团队ID创建房间名称
+      const room_name = `team_room_${team_id}`;
+      let ctx = strapi.requestContext.get();
+      ctx.room_name = room_name;
+      // 将客户端加入房间
+      strapi.socket.join(room_name);
+      strapi.$io.raw({ event: 'room:join', rooms: [room_name], data: { message: 'hello' } });
+      // strapi.$io.emit({ event: 'room:join', schema, data });
+    },
+    leave(...args) {
+      const [ team_id ] = args;
+      // 使用团队ID创建房间名称
+      const room_name = `team_room_${team_id}`;
+      let ctx = strapi.requestContext.get();
+      ctx.room_name = `team_room_${user.default_team?.id}`;
+      // 将客户端加入房间
+      strapi.socket.leave(room_name);
     }
 }));

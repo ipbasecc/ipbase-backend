@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "contacts",
+  "info": {
+    "singularName": "contact",
+    "pluralName": "contacts",
+    "displayName": "contact",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "contacters": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "by_contacts"
+    },
+    "owner": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "contact"
+    },
+    "friend_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::friend-request.friend-request",
+      "mappedBy": "contact"
+    },
+    "blockeds": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "wasBlockeds"
+    },
+    "friend_request_question": {
+      "type": "json"
+    },
+    "accept_friend": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

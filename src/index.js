@@ -3,13 +3,13 @@
 module.exports = {
   register({ strapi }) {
     const DISABLES = [
-        'board', 'card', 'column', 'document',
-        'group', 'kanban', 'member', 'member-role',
-        'overview', 'project', 'schedule',
-        'schedule-event', 'storage', 'storage-file',
+        'board', 'card', 'column', 'document', 
+        'group', 'kanban', 'member', 'member-role', 
+        'overview', 'project', 'schedule', 
+        'schedule-event', 'storage', 'storage-file', 
         'team', 'team-channel', 'todo', 'todogroup'
     ];
-
+    
     DISABLES.forEach(api => {
         strapi.plugin('graphql').service('extension').shadowCRUD(`api::${api}.${api}`).disableQueries();
         strapi.plugin('graphql').service('extension').shadowCRUD(`api::${api}.${api}`).disableMutations();
@@ -335,6 +335,21 @@ module.exports = {
             },
           ],
         },
+        'Mutation.createFavorite': {
+          middlewares: [
+            async (next, parent, args, context, info) => {
+                // console.log('context', context)
+              const { id } = context.state.user;
+              if(!id){
+                  throw new Error('User is not authenticated');
+              } else {
+                  args.data.owner = id
+                  const res = await next(parent, args, context, info);
+                  return res
+              }
+            },
+          ],
+        },
         'Mutation.updateFavorite': {
           middlewares: [
             async (next, parent, args, context, info) => {
@@ -523,24 +538,34 @@ module.exports = {
         },
       },
     });
+    
+    // 向Strapid对象注入一个方法以便全局可以使用
+    // 这里是检查插件是否启用，方便业务内判断并执行对应逻辑
+    const checkPluginEnable = (plugin_name) => {
+        const Plugin = strapi.plugins[plugin_name];
+        return Plugin && Object.keys(Plugin).length > 0 ? true : false;
+    }
+    strapi.checkPluginEnable = checkPluginEnable;
   },
 
   bootstrap({ strapi }) {
+      const mmapi = strapi.plugin('mattermost').service('mmapi');
+      strapi.mmapi = mmapi;
     // const server = 'ws://localhost:61337';
     // const { WebsocketProvider } = require('y-websocket');
-
+    
     // const provider = (room, _ydoc) => {
     //     return new WebsocketProvider(
     //       server, room, _ydoc, { WebSocketPolyfill: require('ws') }
     //     )
     // }
     // strapi.provider = provider
-
+    
     // const { WebSocketServer } = require("ws");
-
+     
     // // 创建 yjs ws 服务
     // const yjsws = new WebSocketServer({ port: 61337 });
-
+     
     // yjsws.on("connection", (conn, req) => {
     //   console.log('"yjs connection"'); // 标识每一个连接用户，用于广播不同的文件协同
     //   conn.onmessage = (event) => {
@@ -548,7 +573,7 @@ module.exports = {
     //       conn.send(event.data);
     //     });
     //   };
-
+     
     //   conn.on("close", (conn) => {
     //     console.log("yjs 用户关闭连接");
     //   });

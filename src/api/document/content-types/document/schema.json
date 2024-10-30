@@ -60,6 +60,35 @@
     "disable_share": {
       "type": "boolean",
       "default": false
+    },
+    "cover": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "by_team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "documents"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false
+    },
+    "notebook": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::notebook.notebook",
+      "inversedBy": "documents"
+    },
+    "by_course": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::card.card"
     }
   }
 }

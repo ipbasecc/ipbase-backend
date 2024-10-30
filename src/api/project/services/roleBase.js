@@ -2,8 +2,10 @@ module.exports = {
     roleBase: async () => {
         const { schedule } = require('./role_atom/schedule');
         const { schedule_event } = require('./role_atom/schedule-event');
+        const { budget } = require('./role_atom/budget');
         const role_schedule = schedule();
         const role_schedule_event = schedule_event();
+        const role_budget = budget();
         let role = [
             {
                 "role": "creator",
@@ -78,6 +80,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": true
+                            },
+                            {
+                                "field": "budget",
+                                "modify": true
                             }
                         ]
                     },
@@ -114,6 +120,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": true
                             }
                         ]
@@ -240,6 +250,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": true
                             }
                         ]
                     },
@@ -312,6 +326,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": true
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": true
                             },
                             {
@@ -501,6 +519,7 @@ module.exports = {
                     },
                     role_schedule.creator, // 对应前端 - “规划”
                     role_schedule_event.creator,
+                    role_budget.creator,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -592,6 +611,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": true
+                            },
+                            {
+                                "field": "budget",
+                                "modify": true
                             }
                         ]
                     },
@@ -628,6 +651,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": true
                             }
                         ]
@@ -754,6 +781,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": true
                             }
                         ]
                     },
@@ -826,6 +857,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": true
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": true
                             },
                             {
@@ -1015,6 +1050,7 @@ module.exports = {
                     },
                     role_schedule.owner,
                     role_schedule_event.owner,
+                    role_budget.owner,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -1106,6 +1142,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": true
+                            },
+                            {
+                                "field": "budget",
+                                "modify": true
                             }
                         ]
                     },
@@ -1142,6 +1182,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": true
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": true
                             }
                         ]
@@ -1268,6 +1312,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": true
                             }
                         ]
                     },
@@ -1340,6 +1388,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": true
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": true
                             },
                             {
@@ -1529,6 +1581,7 @@ module.exports = {
                     },
                     role_schedule.executor,
                     role_schedule_event.executor,
+                    role_budget.executor,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -1616,6 +1669,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -1653,6 +1710,10 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
+                                "modify": true
                             }
                         ]
                     },
@@ -1778,6 +1839,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -1847,6 +1912,10 @@ module.exports = {
                             {
                                 "field": "order",
                                 "modify": true
+                            },
+                            {
+                                "field": "manageRole",
+                                "modify": false
                             },
                             {
                                 "field": "share",
@@ -2031,6 +2100,7 @@ module.exports = {
                     },
                     role_schedule.reviewer,
                     role_schedule_event.reviewer,
+                    role_budget.reviewer,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -2118,6 +2188,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -2154,6 +2228,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": false
                             }
                         ]
@@ -2280,6 +2358,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -2348,6 +2430,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": false
                             },
                             {
@@ -2533,6 +2619,7 @@ module.exports = {
                     },
                     role_schedule.member,
                     role_schedule_event.member,
+                    role_budget.member,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -2620,6 +2707,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -2656,6 +2747,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": false
                             }
                         ]
@@ -2782,6 +2877,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": true
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -2851,6 +2950,10 @@ module.exports = {
                             {
                                 "field": "order",
                                 "modify": true
+                            },
+                            {
+                                "field": "manageRole",
+                                "modify": false
                             },
                             {
                                 "field": "share",
@@ -3039,6 +3142,7 @@ module.exports = {
                     },
                     role_schedule.master,
                     role_schedule_event.master,
+                    role_budget.master,
                     {
                         "collection": "card_schedule",
                         "create": true,
@@ -3126,6 +3230,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -3162,6 +3270,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": false
                             }
                         ]
@@ -3288,6 +3400,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -3356,6 +3472,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": false
                             },
                             {
@@ -3545,6 +3665,7 @@ module.exports = {
                     },
                     role_schedule.external,
                     role_schedule_event.external,
+                    role_budget.external,
                     {
                         "collection": "card_schedule",
                         "create": false,
@@ -3632,6 +3753,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -3668,6 +3793,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": false
                             }
                         ]
@@ -3794,6 +3923,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -3862,6 +3995,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": false
                             },
                             {
@@ -4051,6 +4188,7 @@ module.exports = {
                     },
                     role_schedule.unconfirmed,
                     role_schedule_event.unconfirmed,
+                    role_budget.unconfirmed,
                     {
                         "collection": "card_schedule",
                         "create": false,
@@ -4138,6 +4276,10 @@ module.exports = {
                             {
                                 "field": "disable_share",
                                 "modify": false
+                            },
+                            {
+                                "field": "budget",
+                                "modify": false
                             }
                         ]
                     },
@@ -4174,6 +4316,10 @@ module.exports = {
                             },
                             {
                                 "field": "jsonContent",
+                                "modify": false
+                            },
+                            {
+                                "field": "marker_todos",
                                 "modify": false
                             }
                         ]
@@ -4300,6 +4446,10 @@ module.exports = {
                             {
                                 "field": "sub_folders",
                                 "modify": false
+                            },
+                            {
+                                "field": "order",
+                                "modify": false
                             }
                         ]
                     },
@@ -4368,6 +4518,10 @@ module.exports = {
                             },
                             {
                                 "field": "order",
+                                "modify": false
+                            },
+                            {
+                                "field": "manageRole",
                                 "modify": false
                             },
                             {
@@ -4555,15 +4709,16 @@ module.exports = {
                             }
                         ]
                     },
-                    role_schedule.unconfirmed,
-                    role_schedule_event.unconfirmed,
+                    role_schedule.blocked,
+                    role_schedule_event.blocked,
+                    role_budget.blocked,
                     {
                         "collection": "card_schedule",
                         "create": false,
                         "delete": false,
                         "read": false,
                         "modify": false,
-                        "fields_permission": role_schedule.unconfirmed.fields_permission
+                        "fields_permission": role_schedule.blocked.fields_permission
                     },
                     {
                         "collection": "card_schedule_event",
@@ -4571,7 +4726,7 @@ module.exports = {
                         "delete": false,
                         "read": false,
                         "modify": false,
-                        "fields_permission": role_schedule_event.unconfirmed.fields_permission
+                        "fields_permission": role_schedule_event.blocked.fields_permission
                     },
                 ]
             },

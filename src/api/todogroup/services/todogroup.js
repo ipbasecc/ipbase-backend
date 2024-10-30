@@ -44,7 +44,6 @@ module.exports = createCoreService('api::todogroup.todogroup',({strapi}) => ({
         } else if(data.color_marker && (!fields_permission?.includes('color_marker') && !belonged_user)) {
             ctx.throw(401, '您无权修改待办分组颜色标签')
         }
-        console.log('orderTodo',orderTodo);
         if(data.todos && (orderTodo || belonged_user)) {
             params.todos = data.todos
         } else if(data.todos && (!orderTodo && !belonged_user)) {

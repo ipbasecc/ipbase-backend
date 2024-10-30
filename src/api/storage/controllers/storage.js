@@ -92,6 +92,8 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                     return storage
                 }
             }
+        } else {
+            ctx.throw(403, '您无权访问该数据')
         }
     },
     async update(ctx) {
@@ -137,6 +139,25 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                 populate: {
                     files: true,
                     sub_folders: true,
+                    storage_files: {
+                        populate: {
+                            file: {
+                                fields: ['id','name','url','ext']
+                            },
+                            owner: {
+                                fields: ['id','username'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id','name','url','ext']
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     creator: {
                         fields: ['id','username'],
                         populate: {
@@ -152,13 +173,24 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                     can_read_user: {
                         fields: ['id']
                     },
-                    can_write_user: {
+                    can_wtite_user: {
                         fields: ['id']
                     }
                 }
             })
             if(update) {
                 delete update.azureInfo
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: update
+                }
+                if(storage.belonged_project){
+                    response.project_id = storage.belonged_project.id
+                }
+                if(storage.belonged_card){
+                    response.card_id = storage.belonged_card.id
+                }
+                strapi.$publish('storage:updated', [ctx.room_name], response);
                 return update
             }
         }
@@ -303,6 +335,20 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
             })
             if(create_storage) {
                 delete create_storage.azureInfo
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: create_storage
+                }
+                if(assign_project){
+                    response.project_id = assign_project
+                }
+                if(assign_card){
+                    response.card_id = assign_card
+                }
+                if(assign_storage){
+                    response.parent_storage_id = assign_storage
+                }
+                strapi.$publish('storage:created', [ctx.room_name], response);
                 return create_storage
             }
         } else {
@@ -406,6 +452,13 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                 }
                 // console.log('done',done);
                 if(!done.includes(false)) {
+                    let response = {
+                        team_id: ctx.default_team?.id,
+                        data: {
+                            removed_storage_id: id
+                        }
+                    }
+                    strapi.$publish('storage:removed', [ctx.room_name], response);
                     return 'OK'
                 } else {
                     ctx.throw(401, '执行出错，请刷新页面后再尝试');
@@ -597,7 +650,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
         const body = ctx.request.body;
         const { path, action, data, filename } = body
         const { uploadFiles } = ctx.request.files;
-        console.log('uploadFiles', uploadFiles?.path)
+        // console.log('uploadFiles', uploadFiles?.path)
         const filePath = uploadFiles?.path;
         const { storage_id } = ctx.params;
 

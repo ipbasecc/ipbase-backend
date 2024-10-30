@@ -6,6 +6,9 @@
  */
 
 const { createCoreController } = require('@strapi/strapi').factories;
+const isNumber = (value) => {
+    return Object.prototype.toString.call(value) === '[object Number]';
+}
 
 // 结构优化功能、待确定
 // const { getPermission } = require ('../../../services/getPermission.js') 
@@ -93,14 +96,14 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         } else {
             projects = [];
             total = 0;
-            return {_empty,total,page,per_page}
+            return {projects,total,page,per_page}
         }
     },
     async findOne(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const proj_id = ctx.request.params.id;
-
+        
         let auth;
         let __ACL;
         let fields_permission = []
@@ -168,7 +171,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const { id } = ctx.params;
-        const data = ctx.request.body
+        const { data } = ctx.request.body
         // console.log(data);
 
         if(!data){
@@ -180,6 +183,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let orderBoards;
         let orderSchedules;
         let orderDocuments;
+        let orderStorages;
         let __ACL
         const project = await strapi.service('api::project.project').find_projectByID(id);
         if(project){
@@ -193,11 +197,10 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             let authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'project');
             fields_permission = [...fields_permission, ...authed_fields];
 
-
-            function arraysEqual(arr1, arr2) {
-                const set1 = new Set(arr1);
-                const set2 = new Set(arr2);
-                return set1.size === set2.size;
+            function arraysEqual(a, b) {
+              if (a.length !== b.length) return false;
+              const set = new Set(a);
+              return b.every(item => set.has(item));
             }
 
             if(data.boards){
@@ -238,6 +241,19 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             }
 
+            if(data.storages){
+                const project_storages_ids = project.storages.map(i => Number(i.id));
+                const number_it = data.storages.map(i => Number(i));
+
+                if(arraysEqual(project_storages_ids,number_it)){
+                    let authed_fields_of_documents = strapi.service('api::project.project').clac_authed_fields(ACL,'storage');
+                    orderStorages = authed_fields_of_documents.includes('order')
+                    // console.log(orderDocuments);
+                } else {
+                    ctx.throw(404, '错误的文档ID列表')
+                }
+            }
+
             if(is_blocked){
                 auth = false
                 ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
@@ -258,7 +274,8 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             const props = {
                 orderBoards: orderBoards,
                 orderSchedules: orderSchedules,
-                orderDocuments: orderDocuments
+                orderDocuments: orderDocuments,
+                orderStorages: orderStorages
             }
             let params = await strapi.service('api::project.project').process_updateProject_params(data,fields_permission,props);
             const populate = strapi.service('api::project.project').response_template();
@@ -274,7 +291,16 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             if(_mm_channel?.data){
                 response.mm_channel = _mm_channel.data
             }
-
+            const team_id = response.by_team?.id
+            if(team_id){
+                strapi.$publish('project:project_modify', [`team_room_${team_id}`], {
+                    team_id: team_id,
+                    project_id: response.id,
+                    data: {
+                        project: response
+                    }
+                });
+            }
             return response
         } else {
             ctx.throw(401, '您无权执行此操作')
@@ -282,7 +308,6 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
     },
     async create(ctx) {
         await this.validateQuery(ctx);
-        const { roleBase } = require ('./role_template');
         const { preferenceBase } = require ('./preference_template.js');
         const user_id = Number(ctx.state.user.id);
         const data = ctx.request.body;
@@ -393,7 +418,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             })
         }
         if(new_schedule){
-            let preferences = await preferenceBase();
+            let preferences = preferenceBase();
             new_project = await strapi.entityService.create('api::project.project',{
                 data: {
                     name: data.name,
@@ -432,9 +457,47 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                                 fields: ['ext','url']
                             }
                         }
-                    }
+                    },
+                    project_members: {
+                        populate: {
+                            by_user: {
+                                fields: ['id','username','mm_profile'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id','url','ext']
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            member_roles: {
+                                fields: ['id','subject']
+                            }
+                        }
+                    },
+                    member_roles: {
+                        populate: {
+                            ACL: {
+                                populate: {
+                                    fields_permission: true
+                                }
+                            }
+                        }
+                    },
                 }
             })
+        }
+        
+        const team_id = team?.id
+        if(team_id){
+            strapi.$publish('project:project_created', [`team_room_${team_id}`], {
+                team_id: team_id,
+                data: {
+                    project: new_project
+                }
+            });
         }
         return new_project
     },
@@ -466,29 +529,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         }
 
         if(auth) {
-            // 先发送一条消息，项目被删除了
-            const mmChannel_id = project.mm_channel?.id;
-
-            const mmapi = strapi.plugin('mattermost').service('mmapi');
-            let params = {
-                "channel_id": mmChannel_id,
-                "message": `当前项目已经被删除`,
-                "props": {
-                    "strapi": {
-                        "data": {
-                            "is": 'project',
-                            "by_user": user_id,
-                            "project_id": project.id,
-                            "action": 'delete'
-                        }
-                    }
-                }
-            }
-            const res = await mmapi.createPost(params);
-            if(res){
-                // 从Mattermost中删除此频道
-                await mmapi.deleteChannel(mmChannel_id);
-            }
+            const team_id = project?.by_team.id
             if(option === 'archive') {
                 const update_project = await strapi.entityService.update('api::project.project',id,{
                     data: {
@@ -496,13 +537,41 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                     },
                     fields: ['id']
                 })
-                // 如果后期用户需要恢复归档，那么需要调用Mattermost的恢复频道API
-                // 同时恢复该项目关联的Mattermost频道
-                if(update_project) return update_project
+                // 如果后期用户需要恢复归档，那么需要调用Mattermost的恢复频道A
+                if(update_project) {
+                    if(team_id){
+                        strapi.$publish('project:project_achived', [`team_room_${team_id}`], {
+                            team_id: team_id,
+                            project_id: id,
+                            data: {
+                                project_id: id
+                            }
+                        });
+                    }
+                    return {
+                        project_id: id,
+                        status: 'achived'
+                    }
+                }
             } else {
+                const mmChannel_id = project.mm_channel?.id;
+                const mmapi = strapi.plugin('mattermost').service('mmapi');
+                await mmapi.deleteChannel(mmChannel_id);
                 const delete_project = await strapi.entityService.delete('api::project.project',id);
                 if(delete_project) {
-                    return delete_project
+                    if(team_id){
+                        strapi.$publish('project:project_deleted', [`team_room_${team_id}`], {
+                            team_id: team_id,
+                            project_id: id,
+                            data: {
+                                project_id: id
+                            }
+                        });
+                    }
+                    return {
+                        project_id: id,
+                        status: 'deleted'
+                    }
                 }
             }
         } else {
@@ -755,9 +824,10 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 teamMember = await strapi.service('api::team.team').addUser(team, user_id, member_role_of_team?.id);
                 await strapi.service('api::team.team').joinPublicChannel(team,teamMember);
             }
-            const add_user_to_project = await strapi.service('api::project.project').addUser(project, teamMember, unconfirmed_memberRole)
+            const memberAdded = await strapi.service('api::project.project').addUser(project, teamMember, unconfirmed_memberRole)
 
-            if(add_user_to_project) {
+            if(memberAdded) {
+                // console.log('add_user_to_project', add_user_to_project)
                 // 将当前用户添加到受邀请成员中
                 invite.was_inviteds.push({ id: user_id });
                 // 项目邀请列表中先移除当前操作的邀请
@@ -795,7 +865,19 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 })
                 // 项目更新完毕以后，发送一条申请加入的消息，由管理人员继续操作
                 if(update_project) {
-                    return add_user_to_project
+                    const team_id = project.by_team?.id
+                    if(team_id){
+                        strapi.$publish('project:join', [`team_room_${team_id}`], {
+                            team_id: team_id,
+                            project_id: project_id,
+                            data: {
+                                member: memberAdded
+                            }
+                        });
+                    }
+                    return {
+                        message: '加入成功，请等待管理员核验后再访问项目'
+                    }
                 }
             }
         }
@@ -843,13 +925,14 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         }
 
         if(auth) {
-            let response = {}
+            let response
             // “待确认”成员，要么一直没被转正，就一直不会在Mattermost频道中，要么被重新“待确认”，那在当时就已经被移出了Mattermost项目频道
             // 因此，如果将要移除的成员不是“待确认”身份，那么先将其移出Mattermost项目频道
             if(!isUnconfirmed){
                 const cur_user_id = user_id
-                response.mm_remove = await strapi.service('api::project.project').removeUer_from_mmChannel(project,cur_user_id,user_id_by_willRemove,removeMember_id)
-            }  
+                await strapi.service('api::project.project').removeUer_from_mmChannel(project,cur_user_id,user_id_by_willRemove,removeMember_id)
+            }
+            const projectRoles_ids = project.member_roles.map(i => i.id);
             const leave = await strapi.entityService.update('api::project.project',project_id, {
                 data: {
                     project_members: {
@@ -857,9 +940,24 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                     }
                 }
             })
+            await strapi.entityService.update('api::member.member', removeMember_id, {
+                data: {
+                    member_roles: {
+                        disconnect: projectRoles_ids
+                    }
+                }
+            })
             if(leave){
-                response.leave = {
-                    removedUser: user_id_by_willRemove
+                const team_id = project.by_team?.id
+                response = {
+                    team_id: team_id,
+                    project_id: project_id,
+                    data: {
+                        removeMember_id: removeMember_id
+                    }
+                }
+                if(team_id){
+                    strapi.$publish('project:leave', [`team_room_${team_id}`], response);
                 }
             }        
             return response
@@ -879,13 +977,13 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             ctx.throw(401, '无效的登陆用户ID')
         }
         if(!project_id) {
-            ctx.throw(401, '需要提供项目ID')
+            ctx.throw(403, '需要提供项目ID')
         }
         if(!body.member_id) {
-            ctx.throw(401, '需要提供用成员ID')
+            ctx.throw(403, '需要提供用成员ID')
         }
         if(!body.new_roles) {
-            ctx.throw(401, '需要提供用户ID')
+            ctx.throw(403, '需要提供用户ID')
         }
 
         let auth;
@@ -988,12 +1086,32 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                     }
                 }
             }
+            let update_role_params = {
+                member_roles: {
+                    set: [...body.new_roles, ...role_notBelongProject]
+                }
+            };
+            // const _member = await strapi.entityService.findMany('api::member.member', {
+            //   where: {
+            //     by_user: user_id,
+            //     by_projects: project_id, // 使用$contains表示包含关系
+            //   },
+            // });
+            const _member = await strapi.db.query('api::member.member').findMany({
+                where: {
+                    by_user: target_user_id,
+                    by_projects: project_id, // 使用$contains表示包含关系
+                  },
+            })
+            console.log('_member', _member)
+            if(_member?.length === 0){
+                
+                update_role_params.by_projects = {
+                    connect: [project_id]
+                }
+            }
             const update_member = await strapi.entityService.update('api::member.member',member_id,{
-                data: {
-                    member_roles: {
-                        set: [...body.new_roles, ...role_notBelongProject]
-                    }
-                },
+                data: update_role_params,
                 populate: {
                     by_user: {
                         fields: ['id','username','mm_profile'],
@@ -1008,34 +1126,25 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                         }
                     },
                     member_roles: {
-                        fields: ['id','subject']
+                        fields: ['id', 'subject']
                     }
                 }
             })
             if(update_member){
-                
-                const channel_id = project.mm_channel?.id;
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
-                let params = {
-                    "channel_id": channel_id,
-                    "message": `成员角色被更新`,
-                    "props": {
-                        "strapi": {
-                            "data": {
-                                "is": 'project',
-                                "by_user": user_id,
-                                "project_id": project.id,
-                                "action": 'member_updated',
-                                "updatedMember": update_member
-                            }
+                const team_id = project.by_team?.id
+                if(team_id){
+                    strapi.$publish('project:member_updated', [`team_room_${team_id}`], {
+                        team_id: team_id,
+                        project_id: project_id,
+                        data: {
+                            member: update_member
                         }
-                    }
+                    });
                 }
-                await mmapi.createPost(params);
-                project.project_members = project.project_members.map(i => i.id === member_id && update_member || i)
-                // console.log('project.project_members',project.project_members,'update_member',update_member);
-                return project
+                return update_member
             }
+        } else {
+            ctx.throw(403, '您无权执行此操作')
         }
     },
     async mmFindOne(ctx) {
@@ -1053,6 +1162,421 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             return project
         } else {
             return 'null'
+        }
+    },
+    async findBudget(ctx) {
+        const user_id = Number(ctx.state.user.id);
+        const project_id = ctx.request.params.id;
+        if(!project_id || project_id === 'undefined'){
+            ctx.throw(403, '错误的项目ID')
+        }
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const roles = member_roles.map(i => i.ACL.filter(j => j.collection === 'budget')).flat(2);
+        const auth = roles.filter(i => i.read)?.length > 0
+        if(auth){
+            let project = await strapi.entityService.findOne('api::project.project', project_id, {
+                fields: ['id'],
+                populate: {
+                    budgets: {
+                        populate: {
+                            ledgers: {
+                                handler: {
+                                    fields: ['id','username'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    fields: ['id', 'ext', 'url']
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                authorizer: {
+                                    fields: ['id','username'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    fields: ['id', 'ext', 'url']
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            if(project){
+                return project
+            } else {
+                ctx.throw(404, '没有找到对应项目')
+            }
+        }
+    },
+    async updateLedger(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.state.user.id);
+        const { project_id, ledger_id } = ctx.request.params;
+        const { budget_id, data } = ctx.request.body;
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const roles = member_roles.map(i => i.ACL.find(j => j.collection === 'budget'))?.map(f => f.fields_permission)?.flat(2);
+        const auth = roles.filter(i => i.field === 'modify_ledger' && i.modify)?.length > 0
+        const authApprove = roles.filter(i => i.field === 'approve_ledger' && i.modify)?.length > 0
+        if(auth){
+            let project = await strapi.entityService.findOne('api::project.project', project_id, {
+                fields: ['id'],
+                populate: {
+                    budgets: {
+                        populate: {
+                            ledgers: {
+                                handler: {
+                                    fields: ['id','username'],
+                                    populate: {
+                                        avatar: {
+                                            fields: ['id', 'ext', 'url']
+                                        }
+                                    }
+                                },
+                                authorizer: {
+                                    fields: ['id','username'],
+                                    populate: {
+                                        avatar: {
+                                            fields: ['id', 'ext', 'url']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            if(project){
+                let budget
+                let update_budget
+                const budgets_ids = project.budgets.map(i => i.id);
+                if(!budgets_ids.includes(budget_id)){
+                    ctx.throw(403, '请检查预算ID')
+                } else {
+                    budget = project.budgets.find(i => i.id === budget_id);
+                }
+                const _ledgers_ids = budget.ledgers.map(i => i.id);
+                
+                if(_ledgers_ids?.includes(Number(ledger_id))){
+                    // console.log('data', data)
+                    let params = {};
+                    if(data.amount){
+                        params.amount = data.amount
+                    }
+                    if(data.purpose){
+                        params.purpose = data.purpose
+                    }
+                    if(data.handler){
+                        params.handler = data.handler
+                    }
+                    if(data.authorizer){
+                        if(authApprove){
+                            params.authorizer = user_id
+                            params.approved = true
+                            const budget = project.budgets.find(i => i.ledgers.map(j => j.id)?.includes(Number(ledger_id)));
+                            const ledger = project.budgets.map(i => i.ledgers).flat(2).find(j => j.id === Number(ledger_id))
+                            // console.log('budget', budget, 'ledger', ledger)
+                            if(budget && ledger.affect_budget){
+                                update_budget = await strapi.entityService.update('api::budget.budget', budget.id,{
+                                    data: {
+                                        amount: budget.amount + ledger.amount
+                                    }
+                                })
+                            }
+                        } else {
+                            ctx.throw(403, '您没有批准用款的权限')
+                        }
+                    }
+                    const _update = await strapi.entityService.update('api::ledger.ledger', ledger_id, {
+                        data: params,
+                        populate: {
+                            handler: {
+                                fields: ['id','username'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id', 'ext', 'url']
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            authorizer: {
+                                fields: ['id','username'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                fields: ['id', 'ext', 'url']
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    if(data.authorizer){
+                        return {
+                            budget: update_budget,
+                            ledger: _update
+                        }
+                    } else {
+                        return _update
+                    }
+                } else {
+                    ctx.throw(403, '错误的流水ID')
+                }
+            } else {
+                ctx.throw(404, '没有找到对应项目')
+            }
+        }
+    },
+    async addLedger(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.state.user.id);
+        const { project_id } = ctx.request.params;
+        const { budget_id, data } = ctx.request.body
+        const { amount, purpose, affect_budget } = data;
+        
+        if(!amount || !isNumber(amount)){
+            ctx.throw(403, '请提正确的供流水金额')
+        }
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const roles = member_roles.map(i => i.ACL.find(j => j.collection === 'budget'))?.map(f => f.fields_permission)?.flat(2);
+        const auth = roles.filter(i => i.field === 'create_ledger' && i.modify)?.length > 0
+        // console.log('auth', auth)
+        if(auth){
+            const project = await strapi.entityService.findOne('api::project.project', project_id, {
+                populate: {
+                    budgets: {
+                        fields: ['id']
+                    }
+                }
+            })
+            const budgets_ids = project.budgets.map(i => i.id);
+            if(!budgets_ids.includes(budget_id)){
+                ctx.throw(403, '请检查预算ID')
+            }
+            const new_ledger = await strapi.entityService.create('api::ledger.ledger', {
+                data: {
+                    amount: amount,
+                    purpose: purpose,
+                    handler: user_id,
+                    budget: budget_id,
+                    affect_budget: affect_budget
+                },
+                populate: {
+                    handler: {
+                        fields: ['id','username'],
+                        populate: {
+                            profile: {
+                                populate: {
+                                    avatar: {
+                                        fields: ['id', 'ext', 'url']
+                                    }
+                                }
+                            }
+                        }
+                    },
+                }
+            })
+            if(new_ledger){
+                return new_ledger
+            } else {
+                ctx.throw(403,'新增流水数据时出错，请刷新页面后重试')
+            }
+        }
+    },
+    async removeLedger(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.state.user.id);
+        const { project_id, ledger_id } = ctx.request.params;
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const roles = member_roles.map(i => i.ACL.find(j => j.collection === 'budget'))?.map(f => f.fields_permission)?.flat(2);
+        const auth = roles.filter(i => i.field === 'delete_ledger' && i.modify)?.length > 0
+        if(auth){
+            const ledger = await strapi.entityService.findOne('api::ledger.ledger', ledger_id, {
+                populate: {
+                    budget: {
+                        populate: {
+                            project: {
+                                fields: ['id']
+                            }
+                        }
+                    }
+                }
+            })
+            if(ledger?.budget?.project?.id !== Number(project_id)){
+                ctx.throw(404, '您提供的流水与项目信息关联不匹配')
+            } else {
+                await strapi.entityService.delete('api::ledger.ledger', ledger_id);
+                return {
+                    ledger_id: ledger_id,
+                    status: 'deleted'
+                }
+            }
+        }
+    },
+    async attachBudget(ctx) {
+        const user_id = Number(ctx.state.user.id);
+        const project_id = ctx.request.params.project_id;
+        const { amount, purpose } = ctx.request.body.data
+        if(!amount || !isNumber(+amount)){
+            ctx.throw(403, '请提正确的供预算金额')
+        }
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        
+        const roles = member_roles.map(i => i.ACL)?.flat(2).filter(j => j.collection === 'budget' && j.create);
+        // console.log('member_roles', roles)
+        const auth = roles?.length > 0
+        if(auth){
+            let attach = await strapi.entityService.create('api::budget.budget', {
+                data: {
+                    amount: amount,
+                    purpose: purpose,
+                    project: project_id
+                }
+            })
+            if(attach){
+                attach.ledgers = []
+                return attach
+            }
+        }
+    },
+    async deleteBudget(ctx) {
+        const user_id = Number(ctx.state.user.id);
+        const { project_id, budget_id} = ctx.request.params;
+        if(!budget_id){
+            ctx.throw(404,'缺少预算ID')
+        }
+        if(!project_id){
+            ctx.throw(404,'缺少项目ID')
+        }
+        const project = await strapi.entityService.findOne('api::project.project', project_id, {
+            populate: {
+                budgets: {
+                    fields: ['id']
+                }
+            }
+        })
+        if(project){
+            const all_ids = project.budgets.map(i => i.id);
+            console.log(all_ids, budget_id)
+            if(!all_ids.includes(Number(budget_id))){
+                ctx.throw(404,'错误的预算ID')
+            }
+        } else {
+            ctx.throw(404,'没有找到对应项目')
+        }
+        
+        const member_roles = await strapi.entityService.findMany('api::member-role.member-role',{
+            filters: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        
+        const roles = member_roles.map(i => i.ACL)?.flat(2).filter(j => j.collection === 'budget' && j.delete);
+        // console.log('member_roles', roles)
+        const auth = roles?.length > 0
+        if(auth){
+            await strapi.entityService.delete('api::budget.budget',budget_id )
+            return {
+                budget_id: budget_id,
+                status: 'removed'
+            }
         }
     }
 }));

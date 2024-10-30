@@ -8,7 +8,7 @@ module.exports = ({ env }) => [
             directives: {
                 'connect-src': ["'self'", 'https:'],
                 'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'",'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','*.yihu.chat','yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro'],
-                'img-src': ["'self'", "'unsafe-eval'", 'data:', 'blob:', 'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','yihu.chat','*.yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro', env("CF_PUBLIC_ACCESS_URL") ? env("CF_PUBLIC_ACCESS_URL").replace(/^https?:\/\//, "") : "",],
+                'img-src': ["'self'", "'unsafe-eval'", 'data:', 'blob:', 'cdn.jsdelivr.net', '*.vantuo.cn','*.aliyuncs.com','*.yihu.team','yihu.chat','*.yihu.chat','*.flame.vip','loaclhost','*.ipbase.cc','*.ipbase.info','*.ipbase.vip','*.ipbase.pro',env("CF_PUBLIC_ACCESS_URL") ? env("CF_PUBLIC_ACCESS_URL").replace(/^https?:\/\//, "") : "",],
                 "frame-src": [ "self", "sandbox.embed.apollographql.com" ],
                 'media-src': [
                     "'self'",
@@ -25,7 +25,7 @@ module.exports = ({ env }) => [
     {
     name: 'strapi::cors',
         config: {
-            headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+            headers: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Fingerprint', 'X-Teamid'],
             origin: [
                   'https://yihu.team',
                   'https://yihu.chat',
@@ -46,7 +46,8 @@ module.exports = ({ env }) => [
                   'https://www.ipbase.pro',
                   'https://www.ipbase.vip',
                   'http://localhost:9000',
-                  'http://localhost:9300'
+                  'http://localhost:9300',
+                  'file://'
               ],
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
         },

@@ -4,7 +4,8 @@
   "info": {
     "singularName": "bizcard-collection",
     "pluralName": "bizcard-collections",
-    "displayName": "bizcardCollectionItem"
+    "displayName": "bizcardCollectionItem",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -34,6 +35,9 @@
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "bizcard_collection_items"
+    },
+    "notification": {
+      "type": "text"
     }
   }
 }

@@ -102,5 +102,90 @@ module.exports = createCoreService('api::column.column', ({strapi}) => ({
         }
 
         return params
-    }
+    },
+    async filterCardsDataByAuth(...args) {
+        const ctx = strapi.requestContext.get();
+        let [ cards, user_id, ACL, isSuper_member ] = args;
+        // 私有卡片 - 管理组和卡片关联用户可见
+        const canShow = async (card) => {
+            const user_roles_inCard = await strapi.db.query('api::member-role.member-role').findMany({
+              where: {
+                by_card: card.id,
+                by_user: user_id,
+                subject: {
+                  $not: {
+                    $in: ['unconfirmed', 'blocked']
+                  }
+                }
+              }
+            });
+            return user_roles_inCard && user_roles_inCard.length > 0
+        }
+        let team_mode
+        if(ctx.default_team){
+            team_mode = ctx.default_team.config.mode || 'toMany';
+        }
+        if(!isSuper_member) {
+            cards = cards.filter(card => {
+              // 卡片不是私有的
+              if (!card.private && team_mode === 'toMany') {
+                return true;
+              } else {
+                  // 用户是卡片的执行者
+                  if (card.executor && card.executor.id === user_id) {
+                    return true;
+                  }
+                  
+                  // 用户是卡片的成员之一
+                  if (canShow(card)) {
+                    return true;
+                  }
+              }
+              return false;
+            });
+        } else {
+            return cards
+        }
+
+        const { read:read_column_role, create:create_column_role, modify:modify_column_role, remove:remove_column_role } = strapi.service('api::project.project').calc_collection_auth(ACL,'column');
+        const { read:read_card_role, create:create_card_role, modify:modify_card_role, remove:remove_card_role } = strapi.service('api::project.project').calc_collection_auth(ACL,'card');
+        const { read:read_card_todogroup_role, create:create_card_todogroup_role, modify:modify_card_todogroup_role, remove:remove_card_todogroup_role } = strapi.service('api::project.project').calc_collection_auth(ACL,'card_todogroups');
+        const { read:read_card_todo_role, create:create_card_todo_role, modify:modify_card_todo_role, remove:remove_card_todo_role } = strapi.service('api::project.project').calc_collection_auth(ACL,'card_todo');
+
+        if(!read_card_role) {
+            cards = cards.filter(i => {
+                if(i.creator.id === user_id){
+                    return true
+                }
+                if(i.card_members && i.card_members.some(m => m.by_user.id === user_id)){
+                    return true
+                }
+            })
+        }
+        if(!read_card_todogroup_role) {
+            cards = cards.map(card => ({
+                ...card,
+                todogroups: []
+            }))
+        }
+        if(!read_card_todo_role) {
+            cards = cards.map(card => ({
+                ...card,
+                todogroups: card.todogroups.map(todogroup => ({
+                    ...todogroup,
+                    todos: []
+                }))
+            }))
+        }
+        cards = cards.map(card => {
+            return {
+                ...card,
+                share_codes: card.share_codes && card.share_codes.length > 0 ? card.share_codes.filter(code => code.creator.id === user_id) : null
+            }
+        })
+        
+
+
+        return kanban
+    },
 }));

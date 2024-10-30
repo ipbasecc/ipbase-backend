@@ -119,6 +119,35 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         // console.log('belongedInfo project',belongedInfo);
         return belongedInfo
     },
+    async sync_mpsInfo(...args) {
+      const [overviews] = args;
+      const updatedOverviews = await Promise.all(overviews.map(async (overview) => {
+        if (!overview.mps_info && overview.media?.url && overview.media?.ext) {
+          const url = await strapi.service('api::ali.ali').processUrl(overview.media?.url, overview.media?.ext);
+        //   console.log('mps_info url', url)
+          if(!url){
+              return overview
+          }
+          if(overview.mps_info){
+              return overview
+          }
+          const mps_info = await strapi.service('api::ali.ali').queryMedias(url);
+          if (mps_info) {
+            const update = await strapi.entityService.update('api::overview.overview', overview.id, {
+              data: {
+                mps_info: mps_info
+              }
+            });
+            if(update){
+                overview.mps_info = update.mps_info
+            }
+          }
+        }
+        return overview;
+      }));
+    
+      return updatedOverviews;
+    },
     async find_cardByID(...args) {
         const ctx = strapi.requestContext.get();
         const [card_id] = args;
@@ -151,13 +180,13 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         profile: {
                             populate: {
                                 avatar: {
-                                    fields: ['ext','url']
+                                    fields: ['id', 'ext','url']
                                 },
                                 brand: {
-                                    fields: ['ext','url']
+                                    fields: ['id', 'ext','url']
                                 },
                                 cover: {
-                                    fields: ['ext','url']
+                                    fields: ['id', 'ext','url']
                                 },
                             }
                         },
@@ -169,89 +198,18 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 overviews: {
                     populate: {
                         media: {
-                            fields: ['ext','url']
-                        }
-                    }
-                },
-                card_kanban: {
-                    populate: {
-                        columns: {
+                            fields: ['id', 'ext','url']
+                        },
+                        marker_todos: {
                             populate: {
-                                cards: {
-                                    populate: {
-                                        share_codes: {
-                                            populate: {
-                                                creator: {
-                                                    fields: ['id','username'],
-                                                }
-                                            }
-                                        },
-                                        followed_bies: {
-                                            fields: ['id','username'],
-                                            populate: {
-                                                profile: {
-                                                    fields: ['title'],
-                                                    populate: {
-                                                        avatar: {
-                                                            fields: ['ext','url']
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        card_members: {
-                                            populate: {
-                                              by_user: {
-                                                fields: ['id']
-                                              },
-                                              member_roles: {
-                                                  fields: ['id']
-                                              }
-                                            }
-                                          },
-                                          member_roles: {
-                                              populate: {
-                                                  ACL: {
-                                                      populate: {
-                                                          fields_permission: true
-                                                      }
-                                                  }
-                                              }
-                                          },
-                                        overview: {
-                                            populate: {
-                                                media: {
-                                                    fields: ['ext','url']
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                executor: {
-                                    fields: ['id','mm_profile'],
-                                    populate: {
-                                        profile: {
-                                            populate: {
-                                                avatar: {
-                                                    fields: ['ext','url']
-                                                },
-                                                brand: {
-                                                    fields: ['ext','url']
-                                                },
-                                                cover: {
-                                                    fields: ['ext','url']
-                                                },
-                                            }
-                                        },
-                                        user_channel: {
-                                            fields: ['id']
-                                        }
-                                    }
+                                attachment: {
+                                    fields: ['id', 'ext','url']
                                 }
                             }
                         }
                     }
                 },
+                card_kanban: true,
                 storage: {
                     populate: {
                         files: {
@@ -307,7 +265,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 },
                 card_documents: {
                     populate: {
-                        author: {
+                        creator: {
                             fields: ['id','username'],
                             populate: {
                                 profile: {
@@ -401,6 +359,9 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
             }
         })
         if(card) {
+            if(card.overviews?.length > 0){
+                card.overviews = await strapi.service('api::card.card').sync_mpsInfo(card.overviews);
+            }
             return card
         }
     },
@@ -656,6 +617,24 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         } else if (data.data?.todogroups && !fields_permission.includes('todogroups')) {
             ctx.throw(401, '您无权修改卡片清单分组')
         }
+        // 卡片文档排序拥有card的modify权限即可，这里不需要再次鉴权
+        if(data.data?.card_documents) {
+            const _card_documents_ids = card.card_documents.map(i => i.id)
+            function arraysEqual(a, b) {
+              if (a.length !== b.length) return false;
+              const set = new Set(a);
+              return b.every(item => set.has(item));
+            }
+            if(!arraysEqual(_card_documents_ids, data.data?.card_documents)){
+                console.log('排序数据错误', _card_documents_ids, data.data?.card_documents)
+                ctx.throw(403, '排序数据错误')
+            } else {
+                params.card_documents = data.data?.card_documents
+            }
+        }
+        //  else if (data.data?.card_documents && !fields_permission.includes('todogroups')) {
+        //     ctx.throw(401, '您无权修改卡片清单分组')
+        // }
         if(data.data?.role && fields_permission.includes('manageRole')) {
             params.role = card.role.map((r) => ({
                 ...r,
@@ -735,19 +714,6 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 card.card_kanban = new_kanban;
             }
         }
-        if(card && (!card.card_documents || card.card_documents.length === 0)) {
-            var now = new Date();
-            var iso = now.toISOString();
-            const _doc_name = card.name ? `${card.name} 的任务文档` : '默认卡片文档'
-            const new_document = await strapi.entityService.create('api::document.document',{
-                data: {
-                    title: _doc_name,
-                    jsonContent: {},
-                    publishedAt: iso,
-                    by_card: card.id
-                }
-            })
-        }
         if(card && !card.schedule) {
             var now = new Date();
             var iso = now.toISOString();
@@ -785,13 +751,13 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                     profile: {
                         populate: {
                             avatar: {
-                                fields: ['ext','url']
+                                fields: ['id', 'ext','url']
                             },
                             brand: {
-                                fields: ['ext','url']
+                                fields: ['id', 'ext','url']
                             },
                             cover: {
-                                fields: ['ext','url']
+                                fields: ['id', 'ext','url']
                             },
                         }
                     },
@@ -803,7 +769,14 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
             overviews: {
                 populate: {
                     media: {
-                        fields: ['ext','url']
+                        fields: ['id', 'ext','url']
+                    },
+                    marker_todos: {
+                        populate: {
+                            attachment: {
+                                fields: ['id', 'ext','url']
+                            }
+                        }
                     }
                 }
             },
@@ -1065,6 +1038,8 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         return _
     },
     clearRedisCacheByCardID(card_id) {
+        const isRestCacheEnabled = strapi.checkPluginEnable('rest-cache')
+        if(!isRestCacheEnabled) return
         const _redisCache = strapi.plugins[
           "rest-cache"
         ].services.cacheConfig.getCacheKeysRegexp("api::card.card", {

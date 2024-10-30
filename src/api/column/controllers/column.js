@@ -78,6 +78,11 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
             let val = column_create;
             // @ts-ignore
             val.cards = []; //默认为分栏下的cards字段返回一个空数组，否则前端往分栏拖拽卡片时会无法完成
+            strapi.$publish('column:created', [ctx.room_name], {
+                team_id: ctx.default_team?.id,
+                kanban_id: kanban_id,
+                data: val
+            });
             return val
         } else {
             return '创建时出错，请刷新页面后重新尝试'
@@ -97,6 +102,7 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
         let ACL;
         let fields_permission = [];
         let orderCards;
+        let isSuper_member
         const belongedInfo = await strapi.service('api::column.column').find_belongedInfo_byColumnID(column_id);
         if(belongedInfo){
             let members;
@@ -104,6 +110,8 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
                 // @ts-ignore
                 const {ACL:__ACL, is_blocked, role_names} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
                 ACL = __ACL
+                
+                isSuper_member = role_names.includes('creator')
                 
                 if(is_blocked){
                     ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
@@ -138,55 +146,20 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
                 orderCards: orderCards
             }
             const params = strapi.service('api::column.column').process_updateColumn_params(data,fields_permission,props)
-            const column_update = await strapi.entityService.update('api::column.column',column_id,{
+            const column_populate = strapi.service('api::kanban.kanban').column_populate();
+            let column_update = await strapi.entityService.update('api::column.column',column_id,{
                 data: params,
-                populate: {
-                    cards: {
-                        populate: {
-                            followed_bies: {
-                                fields: ['id','username'],
-                                populate: {
-                                    profile: {
-                                        fields: ['title'],
-                                        populate: {
-                                            avatar: {
-                                                fields: ['ext','url']
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            card_members: {
-                                populate: {
-                                  by_user: {
-                                    fields: ['id']
-                                  },
-                                  member_roles: {
-                                      fields: ['id']
-                                  }
-                                }
-                              },
-                              member_roles: {
-                                  populate: {
-                                      ACL: {
-                                          populate: {
-                                              fields_permission: true
-                                          }
-                                      }
-                                  }
-                              },
-                            overview: {
-                                populate: {
-                                    media: {
-                                        fields: ['ext','url']
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                populate: column_populate
             });
             if(column_update) {
+                strapi.$publish('column:updated', [ctx.room_name], {
+                    team_id: ctx.default_team?.id,
+                    data: column_update
+                });
+                // todo 待验证：根据用户权限过滤card数据
+                if(column_update.cards?.length > 0){
+                    column_update.cards = await strapi.service('api::column.column').filterCardsDataByAuth(column_update.cards, user_id, ACL, isSuper_member);
+                }
                 return column_update
             } else {
                 return '更新时出错，请刷新页面后重新尝试'
@@ -199,7 +172,7 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
         let project_id = Number(ctx.query.project_id);
         let column_id = Number(ctx.params.id);
 
-        console.log(user_id,project_id);
+        // console.log(user_id,project_id);
 
         if(!column_id) {
             ctx.throw(400, '缺少分栏ID');
@@ -259,6 +232,12 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
         }
         const deleteColumn = await strapi.entityService.delete('api::column.column',column_id)
         if(deleteColumn) {
+            strapi.$publish('column:deleted', [ctx.room_name], {
+                team_id: ctx.default_team?.id,
+                data: {
+                    removed_column_id: column_id
+                }
+            });
             return deleteColumn
         }
     },

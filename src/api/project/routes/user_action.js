@@ -47,6 +47,54 @@ module.exports = {
             // "config": {
             //     "auth": true
             // }
+        },
+        {
+            "method": "GET",
+            "path": "/projects/:id/budget",
+            "handler": "project.findBudget",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "PUT",
+            "path": "/projects/:project_id/ledger/:ledger_id",
+            "handler": "project.updateLedger",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/ledger",
+            "handler": "project.addLedger",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "DELETE",
+            "path": "/projects/:project_id/ledger/:ledger_id",
+            "handler": "project.removeLedger",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/attach_budget",
+            "handler": "project.attachBudget",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "DELETE",
+            "path": "/projects/:project_id/budget/:budget_id",
+            "handler": "project.deleteBudget",
+            // "config": {
+            //     "auth": true
+            // }
         }
     ]
 }

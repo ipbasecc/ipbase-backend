@@ -95,6 +95,13 @@ module.exports = {
               "label": "enable_settings_schedule_label",
               "enable": true,
               "description": "enable_settings_schedule_description"
+            },
+            {
+              "icon": "mdi-cash",
+              "name": "budget",
+              "label": "enable_settings_budget_label",
+              "enable": true,
+              "description": "enable_settings_budget_description"
             }
           ]
         }

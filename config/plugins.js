@@ -1,13 +1,29 @@
-module.exports = ({env}) => ({
+// async function getTeamIdFromUser(strapi, socket) {
+//   // 从 socket 认证信息中获取用户ID
+//   const userId = socket.handshake.auth.user.id;
+//   // 根据用户ID获取用户所属的团队ID
+//   // 这里需要调用你的用户服务或团队服务来获取信息
+//   let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, {
+//       populate: {
+//           default_team: {
+//               fields: ['id']
+//           }
+//       }
+//   });
+//   const teamId = user?.default_team?.id;
+//   return teamId;
+// }
+
+module.exports = ({ env }) => ({
     "users-permissions": {
-    config: {
-      register: {
-        allowedFields: ["mm_profile"],
-      },
-      jwt: {
-        expiresIn: '7d',
-      },
-    },
+        config: {
+          register: {
+            allowedFields: ["mm_profile"],
+          },
+          jwt: {
+            expiresIn: '7d',
+          },
+        },
     },
     graphql: {
       config: {
@@ -50,78 +66,93 @@ module.exports = ({env}) => ({
       },
     },
     io: {
-    	enabled: false,
+    	enabled: true,
     	config: {
     		socket: {
     			serverOptions: {
     				cors: { origin: '*', methods: ['GET', 'POST', 'PUT'] },
     			},
     		},
+    		hooks: {
+                init({ io }) {
+                  strapi.log.info(`ws working`);
+                },
+            },
     		// This will listen for all supported events on the article content type
-    		contentTypes: ['api::kanban.kanban'],
+    		contentTypes: [],
     		events: [
     			{
     				name: 'connection',
-    				handler: ({ strapi }, socket) => {
-    					// will log every time a client connects
-    					strapi.log.info(`[io] a new client with id ${socket.id} has connected`);
-    				},
+    				// handler: ({ strapi }, socket) => {
+    				// 	// will log every time a client connects
+    				// 	strapi.log.info(`[io] a new client with id ${socket.id} has connected`);
+    				// },
+    				handler: async ({ strapi }, socket) => {
+    				    strapi.socket = socket;
+    				    const publish = (event, rooms, data) => {
+    				        strapi.$io.raw({ 
+        				        event: event,
+        				        rooms: rooms,
+        				        data: data
+        				    });
+    				    }
+    				    strapi.$publish = publish
+                  },
     			},
     		],
     	},
     },
-      // upload: {
-      //   config: {
-      //     provider: "strapi-provider-upload-oss", // full package name is required
-      //     providerOptions: {
-      //       accessKeyId: process.env.ACCESS_KEY_ID,
-      //       accessKeySecret: process.env.ACCESS_KEY_SECRET,
-      //       region: process.env.REGION,
-      //       bucket: process.env.BUCKET,
-      //       uploadPath: process.env.UPLOAD_PATH,
-      //       baseUrl: process.env.BASE_URL,
-      //       timeout: process.env.TIMEOUT,
-      //       secure: process.env.OSS_SECURE,
-      //     },
-      //   },
-      // },
-
+    // upload: {
+    //     config: {
+    //         provider: "strapi-provider-upload-oss", // full package name is required
+    //         providerOptions: {
+    //             accessKeyId: process.env.ACCESS_KEY_ID,
+    //             accessKeySecret: process.env.ACCESS_KEY_SECRET,
+    //             region: process.env.REGION,
+    //             bucket: process.env.BUCKET,
+    //             uploadPath: process.env.UPLOAD_PATH,
+    //             baseUrl: process.env.BASE_URL,
+    //             timeout: process.env.TIMEOUT,
+    //             secure: process.env.OSS_SECURE,
+    //         },
+    //     },
+    // },
     upload: {
-      config: {
-        provider: "strapi-provider-cloudflare-r2",
-        providerOptions: {
-          accessKeyId: env("CF_ACCESS_KEY_ID"),
-          secretAccessKey: process.env.CF_ACCESS_SECRET,
-          /**
-           * `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
-           */
-          endpoint: process.env.CF_ENDPOINT,
-          params: {
-            Bucket: process.env.CF_BUCKET,
+        config: {
+          provider: "strapi-provider-cloudflare-r2",
+          providerOptions: {
+            accessKeyId: env("CF_ACCESS_KEY_ID"),
+            secretAccessKey: process.env.CF_ACCESS_SECRET,
+            /**
+             * `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
+             */
+            endpoint: process.env.CF_ENDPOINT,
+            params: {
+              Bucket: process.env.CF_BUCKET,
+            },
+            /**
+             * Set this Option to store the CDN URL of your files and not the R2 endpoint URL in your DB.
+             * Can be used in Cloudflare R2 with Domain-Access or Public URL: https://pub-<YOUR_PULIC_BUCKET_ID>.r2.dev
+             * This option is required to upload files larger than 5MB, and is highly recommended to be set.
+             * Check the cloudflare docs for the setup: https://developers.cloudflare.com/r2/data-access/public-buckets/#enable-public-access-for-your-bucket
+             */
+            cloudflarePublicAccessUrl: process.env.CF_PUBLIC_ACCESS_URL,
+            /**
+             * Sets if all assets should be uploaded in the root dir regardless the strapi folder.
+             * It is useful because strapi sets folder names with numbers, not by user's input folder name
+             * By default it is false
+             */
+            pool: false,
           },
-          /**
-           * Set this Option to store the CDN URL of your files and not the R2 endpoint URL in your DB.
-           * Can be used in Cloudflare R2 with Domain-Access or Public URL: https://pub-<YOUR_PULIC_BUCKET_ID>.r2.dev
-           * This option is required to upload files larger than 5MB, and is highly recommended to be set.
-           * Check the cloudflare docs for the setup: https://developers.cloudflare.com/r2/data-access/public-buckets/#enable-public-access-for-your-bucket
-           */
-          cloudflarePublicAccessUrl: process.env.CF_PUBLIC_ACCESS_URL,
-          /**
-           * Sets if all assets should be uploaded in the root dir regardless the strapi folder.
-           * It is useful because strapi sets folder names with numbers, not by user's input folder name
-           * By default it is false
-           */
-          pool: false,
+          actionOptions: {
+            upload: {},
+            uploadStream: {},
+            delete: {},
+          },
         },
-        actionOptions: {
-          upload: {},
-          uploadStream: {},
-          delete: {},
-        },
-      },
     },
     redis: {
-      enabled: true,
+      enabled: false,
       config: {
         connections: {
           ipbase: {
@@ -139,7 +170,7 @@ module.exports = ({env}) => ({
       },
     },
     "rest-cache": {
-      enabled: true,
+      enabled: false,
       config: {
         provider: {
           name: "redis",
@@ -196,6 +227,13 @@ module.exports = ({env}) => ({
             {
               contentType: "plugin::users-permissions.user",
               maxAge: 2592000000,
+              routes: /* @type {CacheRouteConfig[]} */ [
+                  {
+                    path: '/api/users-permissions/user/me/init', // note that we set the /api prefix here
+                    method: 'GET', // can be omitted, defaults to GET
+                    maxAge: 2592000000,
+                  },
+              ],
             },
             {
               contentType: "api::board.board",
@@ -204,6 +242,18 @@ module.exports = ({env}) => ({
             {
               contentType: "api::card.card",
               maxAge: 3600000,
+              routes: /* @type {CacheRouteConfig[]} */ [
+                  {
+                    path: '/api/cards', // note that we set the /api prefix here
+                    method: 'GET', // can be omitted, defaults to GET
+                    maxAge: 3600000,
+                  },
+                  {
+                    path: '/api/follows', // note that we set the /api prefix here
+                    method: 'GET', // can be omitted, defaults to GET
+                    maxAge: 3600000,
+                  },
+              ],
             },
             {
               contentType: "api::column.column",
@@ -240,12 +290,12 @@ module.exports = ({env}) => ({
             {
               contentType: "api::schedule.schedule",
               routes: /* @type {CacheRouteConfig[]} */ [
-              {
-                path: '/api/schedules/:id', // note that we set the /api prefix here
-                method: 'GET', // can be omitted, defaults to GET
-                maxAge: 1000,
-              },
-            ],
+                  {
+                    path: '/api/schedules/:id', // note that we set the /api prefix here
+                    method: 'GET', // can be omitted, defaults to GET
+                    maxAge: 1000,
+                  },
+              ],
             },
             {
               contentType: "api::schedule-event.schedule-event",

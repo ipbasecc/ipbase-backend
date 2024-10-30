@@ -14,8 +14,8 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const params = ctx.request.body;
-
-
+        
+        console.log('createCoreController',params)
         if(!user_id){
             ctx.throw(403, '请先登陆')
         }
@@ -80,6 +80,12 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
                 }
             })
             if(create){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    schedule_id: params.data?.schedule,
+                    data: create
+                }
+                strapi.$publish('event:created', [ctx.room_name], response);
                 return create
             } else {
                 ctx.throw(500, '未知错误,请刷新重试')
@@ -136,6 +142,12 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
             })
             
             if(_update){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    schedule_id: schedule_id,
+                    data: _update
+                }
+                strapi.$publish('event:updated', [ctx.room_name], response);
                 return _update
             } else {
                 ctx.throw(500, '未知错误,请刷新重试')
@@ -175,6 +187,14 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
             if(auth){
                 const remove = await strapi.entityService.delete('api::schedule-event.schedule-event',_id);
                 if(remove){
+                    let response = {
+                        team_id: ctx.default_team?.id,
+                        schedule_id: schedule_id,
+                        data: {
+                            removed_event_id: _id
+                        }
+                    }
+                    strapi.$publish('event:deleted', [ctx.room_name], response);
                     const _ = { removed_id: _id}
                     return _
                 }

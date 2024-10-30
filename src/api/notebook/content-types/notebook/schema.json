@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "notebooks",
+  "info": {
+    "singularName": "notebook",
+    "pluralName": "notebooks",
+    "displayName": "notebook"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "tag": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "documents": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::document.document",
+      "mappedBy": "notebook"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "notebooks"
+    }
+  }
+}

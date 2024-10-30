@@ -18,6 +18,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": true
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": true
                             }
                         ]
                     }
@@ -39,6 +43,10 @@ module.exports = {
                             },
                             {
                                 "field": "manageMember",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
                                 "modify": false
                             }
                         ]
@@ -62,13 +70,17 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
+                                "modify": false
                             }
                         ]
                     }
                 ]
             },
             {
-                "role": "block",
+                "role": "blocked",
                 "ACL": [
                     {
                         "collection": "channel",
@@ -83,6 +95,10 @@ module.exports = {
                             },
                             {
                                 "field": "manageMember",
+                                "modify": false
+                            },
+                            {
+                                "field": "jsonContent",
                                 "modify": false
                             }
                         ]

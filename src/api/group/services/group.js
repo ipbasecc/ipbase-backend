@@ -32,7 +32,7 @@ module.exports = createCoreService('api::group.group',({strapi}) => ({
         const ctx = strapi.requestContext.get();
         const [data,fields_permission,props] = args;
         const { orderKanban } = props;
-        console.log('orderKanban',orderKanban);
+        // console.log('orderKanban',orderKanban);
         let params = {};
         if(data.name && fields_permission.includes('name')) {
             params.name = data.name

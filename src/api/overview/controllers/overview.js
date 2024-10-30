@@ -41,17 +41,19 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             auth = create
 
         }
+        let project
         if(attach_to === 'project') {
-            const project = await strapi.service('api::project.project').find_projectByID(attach_to_id)
+            project = await strapi.service('api::project.project').find_projectByID(attach_to_id)
             if(project){
                 const members = project.project_members;
                 const member_roles = project.member_roles;
                 cala_auth(members,member_roles)
             }
         }
+        let card
         if(attach_to === 'card') {
             let members
-            const card = await strapi.service('api::card.card').find_cardByID(attach_to_id);
+            card = await strapi.service('api::card.card').find_cardByID(attach_to_id);
             if(card){
                 members = card.card_members;
                 const member_roles = card.member_roles;
@@ -84,11 +86,16 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         var iso = now.toISOString();
 
         params.publishedAt = iso;
+        const response = {
+            team_id: ctx.default_team?.id
+        }
         if(attach_to === 'project') {
             params.project = attach_to_id;
+            response.project_id = project.id
         }
         if(attach_to === 'card') {
             params.card = attach_to_id;
+            response.card_id = card.id
         }
         // console.log(params);
         const new_overview = await strapi.entityService.create('api::overview.overview',{
@@ -99,7 +106,11 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                 }
             }
         })
-        if(new_overview) return new_overview;
+        if(new_overview) {
+            response.data = new_overview
+            strapi.$publish('overview:created', [ctx.room_name], response);
+            return new_overview;
+        }
     },
     async findOne(ctx) {
         await this.validateQuery(ctx);
@@ -149,7 +160,14 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         if(auth) {
             let deleteOverview = await strapi.entityService.delete('api::overview.overview', id);
             if(deleteOverview) {
-                return deleteOverview
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_overview: id
+                    }
+                }
+                strapi.$publish('overview:deleted', [ctx.room_name], response);
+                return response
             }
         } else {
             ctx.throw(401, '您无权执行此操作')
@@ -191,6 +209,24 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                     }
                 }
             });
+            if(update_overview){
+                console.log('update_overview',update_overview)
+            }
+            if(update_overview?.media?.id && !update_overview?.mps_info){
+                const mediaURL = strapi.service('api::ali.ali').processUrl(update_overview?.media?.url, update_overview?.media?.ext);
+                console.log('mediaURL',mediaURL)
+                if(mediaURL){
+                    const res = await strapi.service('api::ali.ali').addMedia(mediaURL);
+                    if(res){
+                        console.log('addMedia',res)
+                    }
+                }
+            }
+            const response = {
+                team_id: ctx.default_team?.id,
+                data: update_overview
+            }
+            strapi.$publish('overview:updated', [ctx.room_name], response);
             return update_overview
         } else {
             ctx.throw(403, '您无权执行此操作')

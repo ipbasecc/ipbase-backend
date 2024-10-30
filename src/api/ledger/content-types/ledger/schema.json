@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ledgers",
+  "info": {
+    "singularName": "ledger",
+    "pluralName": "ledgers",
+    "displayName": "ledger",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "amount": {
+      "type": "decimal"
+    },
+    "purpose": {
+      "type": "text"
+    },
+    "handler": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "ledgers"
+    },
+    "authorizer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "ledgers"
+    },
+    "logs": {
+      "type": "json"
+    },
+    "budget": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::budget.budget",
+      "inversedBy": "ledgers"
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false
+    },
+    "affect_budget": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

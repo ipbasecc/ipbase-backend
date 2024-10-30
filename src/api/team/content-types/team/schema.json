@@ -56,12 +56,6 @@
       "repeatable": true,
       "component": "project.invite-uri"
     },
-    "default_by": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "plugin::users-permissions.user",
-      "mappedBy": "default_team"
-    },
     "display_name": {
       "type": "string"
     },
@@ -73,6 +67,12 @@
     },
     "config": {
       "type": "json"
+    },
+    "documents": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::document.document",
+      "mappedBy": "by_team"
     }
   }
 }

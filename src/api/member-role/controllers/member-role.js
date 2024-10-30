@@ -67,7 +67,17 @@ module.exports = createCoreController('api::member-role.member-role',({strapi}) 
                 }
             })
             if(create){
-                console.log('create create',create);
+                let _publish = {
+                    team_id: ctx.default_team?.id,
+                    data: create
+                }
+                if(data?.by_project){
+                    _publish.project_id = data?.by_project
+                }
+                if(data?.by_card){
+                    _publish.card_id = data?.by_card
+                }
+                strapi.$publish('member-role:created', [ctx.room_name], _publish);
                 return create
             }
         } else {
@@ -113,10 +123,27 @@ module.exports = createCoreController('api::member-role.member-role',({strapi}) 
                         populate: {
                             fields_permission: true
                         }
-                    }
+                    },
+                    by_card: {
+                        fields: ['id']
+                    },
+                    by_project: {
+                        fields: ['id']
+                    },
                 }
             })
             if(update){
+                let _publish = {
+                    team_id: ctx.default_team?.id,
+                    data: update
+                }
+                if(update?.by_project){
+                    _publish.project_id = update?.by_project.id
+                }
+                if(update?.by_card){
+                    _publish.card_id = update?.by_card.id
+                }
+                strapi.$publish('member-role:updated', [ctx.room_name], _publish);
                 return update
             }
         } else {
@@ -157,7 +184,14 @@ module.exports = createCoreController('api::member-role.member-role',({strapi}) 
         if(auth){
             const remove = await strapi.entityService.delete('api::member-role.member-role',role_id)
             if(remove){
-                return remove
+                let _publish = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_role_id: role_id
+                    }
+                }
+                strapi.$publish('member-role:removed', [ctx.room_name], _publish);
+                return _publish
             }
         } else {
             ctx.throw(403, '您无权执行此操作')

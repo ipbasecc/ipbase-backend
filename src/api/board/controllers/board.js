@@ -33,12 +33,19 @@ module.exports = createCoreController('api::board.board',({strapi}) => ({
             if(auth) {
                 const res = await strapi.service('api::board.board').create_and_init_board(data,user_id);
                 if(res){
+                    const response = {
+                        team_id: ctx.default_team?.id,
+                        project_id: project_id,
+                        data: res
+                    }
+                    strapi.$publish('board:created', [ctx.room_name], response);
                     return res
                 }
             } else {
                 ctx.throw(401, '您无权执行此操作')
             }
         } else {
+            // 此段逻辑为附加board到第三方应用做准备
             const _attachBoard = await strapi.service('api::board.board').create_attachBoard(data,user_id);
             if(_attachBoard){
                 return _attachBoard
@@ -78,7 +85,17 @@ module.exports = createCoreController('api::board.board',({strapi}) => ({
 
         if(auth){
             const deleteBoard = await strapi.entityService.delete('api::board.board', board_id);
-            if(deleteBoard) return deleteBoard
+            if(deleteBoard) {
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    project_id: project.id,
+                    data: {
+                        removed_board: board_id
+                    }
+                }
+                strapi.$publish('board:deleted', [ctx.room_name], response);
+                return response
+            }
         } else {
             ctx.throw(404, 'Board ID 错误，请检查提交数据')
         }
@@ -123,11 +140,20 @@ module.exports = createCoreController('api::board.board',({strapi}) => ({
             let params = await strapi.service('api::board.board').process_updateBoardParams(data,fields_permission);
             let board = await strapi.service('api::board.board').update_board(params, board_id);
 
-            if(board) return board
+            const response = {
+                team_id: ctx.default_team?.id,
+                project_id: project.id,
+                data: board
+            }
+            strapi.$publish('board:updated', [ctx.room_name], response);
+            if(board) {
+                return board
+            }
         } else {
             ctx.throw(403, '您无权执行此操作')
         }
     },
+    // group中调用了此处
     async groupOrder(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
@@ -205,6 +231,14 @@ module.exports = createCoreController('api::board.board',({strapi}) => ({
                 });
                 if(board) {
                     let order = board.groups.map(i => i.id)
+                    const response = {
+                        team_id: ctx.default_team?.id,
+                        board_id: board_id,
+                        data: {
+                            group_order: order
+                        }
+                    }
+                    strapi.$publish('group:order', [ctx.room_name], response);
                     return order
                 }
             } else {

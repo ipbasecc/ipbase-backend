@@ -225,6 +225,7 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                 ...response
             })
             if(create){
+                let res
                 if(project?.mm_channel){
                     const mmChannel_id = project?.mm_channel?.id
                     const mmapi = strapi.plugin('mattermost').service('mmapi');
@@ -256,11 +257,24 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                                 mm_thread: mmMsg.data
                             }
                         })
-                        return update
+                        res = update
                     }
                 } else {
-                    return create
+                    res = create
                 }
+                
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: res
+                }
+                if(by_info.project_id){
+                    response.project_id = by_info.project_id
+                }
+                if(by_info.card_id){
+                    response.card_id = by_info.card_id
+                }
+                strapi.$publish('schedule:created', [ctx.room_name], response);
+                return res
             } else {
                 ctx.throw(500, '未知错误,请刷新重试')
             }
@@ -367,6 +381,11 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
                 if(shareAuth){
                     _update.share_codes = _update.share_codes.filter(i => i.creator.id == user_id)
                 }
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: _update
+                }
+                strapi.$publish('schedule:updated', [ctx.room_name], response);
                 return _update
             } else {
                 ctx.throw(500, '未知错误,请刷新重试')
@@ -397,6 +416,13 @@ module.exports = createCoreController('api::schedule.schedule',({strapi}) => ({
         if(auth){
             const remove = await strapi.entityService.delete('api::schedule.schedule',_id);
             if(remove){
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_schedule_id: _id
+                    }
+                }
+                strapi.$publish('schedule:deleted', [ctx.room_name], response);
                 const _ = { removed_id: _id}
                 return _
             }

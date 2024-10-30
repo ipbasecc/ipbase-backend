@@ -46,6 +46,9 @@
     },
     "purpose": {
       "type": "text"
+    },
+    "jsonContent": {
+      "type": "json"
     }
   }
 }

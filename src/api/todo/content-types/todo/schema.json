@@ -63,7 +63,8 @@
       "type": "enumeration",
       "enum": [
         "todo",
-        "node"
+        "node",
+        "marker"
       ]
     },
     "completed_by": {
@@ -77,6 +78,12 @@
     },
     "fingerprint": {
       "type": "text"
+    },
+    "by_overview": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::overview.overview",
+      "inversedBy": "marker_todos"
     }
   }
 }

@@ -29,6 +29,12 @@
     },
     "feature": {
       "type": "json"
+    },
+    "config": {
+      "type": "json"
+    },
+    "notification": {
+      "type": "text"
     }
   }
 }

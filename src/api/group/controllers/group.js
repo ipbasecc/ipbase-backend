@@ -41,7 +41,15 @@ module.exports = createCoreController('api::group.group',({strapi}) => ({
                 }
             })
     
-            if(group) return group
+            if(group) {
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    board_id: board_id,
+                    data: group
+                }
+                strapi.$publish('group:created', [ctx.room_name], response);
+                return group
+            }
         } else {
             ctx.throw(401, '您无权执行此操作')
         }
@@ -83,10 +91,18 @@ module.exports = createCoreController('api::group.group',({strapi}) => ({
                     kanbans: true
                 }
             });
-
-            return groupUpdate
+            if(groupUpdate){
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    data: groupUpdate
+                }
+                strapi.$publish('group:updated', [ctx.room_name], response);
+                return groupUpdate
+            } else {
+                ctx.throw(503, '创建分组时出错')
+            }
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
 
     },
@@ -125,7 +141,16 @@ module.exports = createCoreController('api::group.group',({strapi}) => ({
             }
             const deleteGroup = await strapi.entityService.delete('api::group.group', group_id);
             if(deleteGroup) {
-                return deleteGroup
+                const response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_group: group_id
+                    }
+                }
+                strapi.$publish('group:deleted', [ctx.room_name], response);
+                return {
+                    removed_group: group_id
+                }
             };
         }
     }

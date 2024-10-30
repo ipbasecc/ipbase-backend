@@ -89,24 +89,19 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                 ctx.throw(401, '您已被管理员屏蔽，请联系管理员申诉')
             }
             let authed_fields
-            if(props === 'root_project'){
-                const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'card_storage');
-                authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'card_storage');
-                auth = {
-                    read: read,
-                    create: create,
-                    modify: modify,
-                    remove: remove
-                }
+            let _collection_name;
+            if(props === 'project'){
+                _collection_name = 'card_storage'
             } else {
-                const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'storage');
-                authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'storage');
-                auth = {
-                    read: read,
-                    create: create,
-                    modify: modify,
-                    remove: remove
-                }
+                _collection_name = 'storage'
+            }
+            const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,_collection_name);
+            authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,_collection_name);
+            auth = {
+                read: read,
+                create: create,
+                modify: modify,
+                remove: remove
             }
 
             fields_permission = [...fields_permission, ...authed_fields]
@@ -126,8 +121,8 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                     remove: true
                 }
             }
-            if(belongedInfo.project){
-                const project_id = belongedInfo.project.id
+            if(belongedInfo.project || belongedInfo.root_project){
+                const project_id = belongedInfo.project?.id || belongedInfo.root_project?.id
                 // console.log('project_id service', project_id);
                 const project = await strapi.service('api::project.project').find_projectByID(project_id);
                 if(project){
@@ -138,7 +133,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                     if(members.filter(i => i.by_user.id === user_id).length > 0){
                         // console.log('members service', members);
                         const data = cala_auth(members,member_roles,'project')
-                        // console.log('data',data,'storage_id',storage_id);
+                        console.log('data project',data);
                         return data
                     }
                 }
@@ -153,7 +148,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                         // return cala_auth(members,'card')
                         
                         const data = cala_auth(members,member_roles,'card')
-                        // console.log('data',data);
+                        console.log('data card',data);
                         return data
                     }
                 }
@@ -729,7 +724,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         let [ path, azureInfo, searchString, caseSensitive, showHiddenItems ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
         var currentPath = path;
-        console.log('searchString',searchString);
+        // console.log('searchString',searchString);
         searchString = searchString.replace(/\*/g, "");
     
         const directories = [];
@@ -756,7 +751,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                 } else {
                     if (basename(item.name).toLowerCase().includes(searchString.toLowerCase())) {
                         const filterPath = dirname(item.name).substring(directoryName.length) + endSlash;
-                        console.log('filterPath',filterPath);
+                        // console.log('filterPath',filterPath);
                         let entry = {};
                         entry.name = basename(item.name);
                         entry.type = extname(item.name);

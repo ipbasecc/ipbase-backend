@@ -147,6 +147,12 @@
     },
     "mm_channel": {
       "type": "json"
+    },
+    "budgets": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::budget.budget",
+      "mappedBy": "project"
     }
   }
 }
