@@ -4,8 +4,8 @@
 IPBase is a "Edgeless Collaboration Platform" application that extends from social interaction to collaboration, integrating communication, social networking, project management, and self-media operations. Its design goal is to provide customers with an integrated collaboration platform that overcomes geographical barriers and cognitive gaps, enabling the formation of collaborative teams and realizing team collaboration management, relationship maintenance, and community building.
 
 ### Application URLs:
-> Mainland China: https://app.yihu.team 
-> International Site: https://app.ipbase.cc 
+- Mainland China: https://app.yihu.team 
+- International Site: https://app.ipbase.cc 
 
 ### Demo Video
 [Production Introduction Video](https://www.youtube.com/watch?v=xP1KFOq4qN0)
@@ -105,10 +105,10 @@ IPBase is a "Edgeless Collaboration Platform" application that extends from soci
 
 ## Acknowledgements:
 
-PostgreSQL: https://www.postgresql.org 
-Strapi: https://strapi.io 
-Mattermost: https://mattermost.com 
-Quasar: https://quasar.dev 
-Tiptap: https://tiptap.dev 
-Ej2: https://www.syncfusion.com
+- PostgreSQL: https://www.postgresql.org 
+- Strapi: https://strapi.io 
+- Mattermost: https://mattermost.com 
+- Quasar: https://quasar.dev 
+- Tiptap: https://tiptap.dev 
+- Ej2: https://www.syncfusion.com
 
