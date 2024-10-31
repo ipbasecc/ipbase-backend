@@ -3,7 +3,7 @@
 /**
  * ali service
  */
- 
+
 const Mts20140618 = require('@alicloud/mts20140618');
 const OpenApi = require('@alicloud/openapi-client');
 const Util = require('@alicloud/tea-util');
@@ -43,11 +43,11 @@ module.exports = {
           // 诊断地址
           console.log(error.data["Recommend"]);
           Util.default.assertAsString(error.message);
-        } 
+        }
     },
     async getMediaByOverviewID(...args){
         const [overview_id] = args;
-        
+
         let overview_media = await strapi.entityService.findOne('api::overview.overview',overview_id,{
             fields: ['id','mps_info'],
             populate: {
@@ -65,7 +65,7 @@ module.exports = {
     processUrl(...args){
         const [url, ext] = args;
         // console.log('url, ext',url, ext)
-        
+
         const videoExts = ['.3gp', '.asf', '.avi', '.dat', '.dv', '.flv', '.f4v', '.gif', '.m2t', '.m3u8', '.m4v', '.mj2', '.mjpeg', '.mkv',  '.mov', '.mp4', '.mpe', '.mpg', '.mpeg', '.mts', '.ogg', '.qt', '.rm', '.rmvb', '.swf', '.vob', '.wmv', '.webm', '.mxf', '.quicktime']
         if(url && videoExts.includes(ext)) {
             return url.replace(/^https:\/\//i, 'http://')
@@ -76,7 +76,7 @@ module.exports = {
     async queryMedias(...args) {
         const [url] = args;
         if(!url){
-            console.log('need url')
+            // console.log('need url')
             return
         }
         let queryMediaListByURLRequest = new Mts20140618.QueryMediaListByURLRequest({
@@ -100,7 +100,7 @@ module.exports = {
           // 诊断地址
           console.log(error.data["Recommend"]);
           Util.default.assertAsString(error.message);
-        } 
+        }
     },
 }
-  
+

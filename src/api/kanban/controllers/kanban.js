@@ -11,7 +11,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         let kanban_id = Number(ctx.params.id);
-        
+
         if(!user_id) {
             return '您无权访问该数据'
         }
@@ -29,7 +29,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             const calc_auth = (members,member_roles,collection) => {
                 const {ACL:__ACL, is_blocked, role_names} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
                 ACL = __ACL
-                
+
                 if(is_blocked){
                     ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
                 }
@@ -47,7 +47,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             }
             if(belongedInfo.belonged_card && !auth){
                 const { read } = await strapi.service('api::card.card').clac_card_auth(belongedInfo.belonged_card,user_id);
-                console.log('read', read)
+                // console.log('read', read)
                 auth = read
             }
         } else {
@@ -68,7 +68,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
                 return processed_data
             }
         }
-        
+
     },
     async create(ctx) {
         await this.validateQuery(ctx);
@@ -95,12 +95,12 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'kanban');
             auth = create
         }
-        
+
         if(!auth) {
             ctx.throw(401, '您无权执行此操作')
             return
         }
-        
+
         var now = new Date();
         var iso = now.toISOString();
 
@@ -183,13 +183,13 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
         } else {
             ctx.throw(404, '看板ID有误，没有找到其所属项目')
         }
-        
+
         if(auth) {
             const orderColumn = strapi.service('api::project.project').calc_field_ACL(ACL,'column','order');
             let props = {
                 orderColumn: orderColumn
             }
-            
+
             let params = strapi.service('api::kanban.kanban').process_updateKanban_params(data,fields_permission,props);
             // console.log('params kanban',params,data);
             const updateKanban = await strapi.entityService.update('api::kanban.kanban',kanban_id,{
@@ -215,7 +215,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
                 return
             }
         }
-        
+
     },
     async delete(ctx) {
         await this.validateQuery(ctx);

@@ -14,8 +14,8 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const params = ctx.request.body;
-        
-        console.log('createCoreController',params)
+
+        // console.log('createCoreController',params)
         if(!user_id){
             ctx.throw(403, '请先登陆')
         }
@@ -127,7 +127,7 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
         if(!auth){
             ctx.throw(403, '您没有权限执行此操作')
         }
-        
+
         if(auth) {
             const _update = await strapi.entityService.update('api::schedule-event.schedule-event',id,{
                 data: params,
@@ -140,7 +140,7 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
                     }
                 }
             })
-            
+
             if(_update){
                 let response = {
                     team_id: ctx.default_team?.id,
@@ -183,7 +183,7 @@ module.exports = createCoreController('api::schedule-event.schedule-event',({str
                     auth = authInfo.remove
                 }
             }
-    
+
             if(auth){
                 const remove = await strapi.entityService.delete('api::schedule-event.schedule-event',_id);
                 if(remove){

@@ -124,7 +124,7 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             auth = calc_info.read
         }
 
-        
+
         if(auth) {
             if(overview?.project){
                 delete overview.project;
@@ -209,17 +209,14 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                     }
                 }
             });
-            if(update_overview){
-                console.log('update_overview',update_overview)
-            }
             if(update_overview?.media?.id && !update_overview?.mps_info){
                 const mediaURL = strapi.service('api::ali.ali').processUrl(update_overview?.media?.url, update_overview?.media?.ext);
-                console.log('mediaURL',mediaURL)
+                // console.log('mediaURL',mediaURL)
                 if(mediaURL){
                     const res = await strapi.service('api::ali.ali').addMedia(mediaURL);
-                    if(res){
-                        console.log('addMedia',res)
-                    }
+                    // if(res){
+                    //     console.log('addMedia',res)
+                    // }
                 }
             }
             const response = {

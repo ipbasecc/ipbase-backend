@@ -110,7 +110,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
             return data
         }
         const belongedInfo = await strapi.service('api::storage.storage').find_belongedInfo_byStorageID(storage_id);
-        
+
         if(belongedInfo){
             // console.log('belongedInfo belongedInfo',belongedInfo);
             if(belongedInfo.user_id === user_id){
@@ -133,7 +133,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                     if(members.filter(i => i.by_user.id === user_id).length > 0){
                         // console.log('members service', members);
                         const data = cala_auth(members,member_roles,'project')
-                        console.log('data project',data);
+                        // console.log('data project',data);
                         return data
                     }
                 }
@@ -146,9 +146,9 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                     const member_roles = card.member_roles;
                     if(members.filter(i => i.by_user.id === user_id).map(j => j.by_user.id).includes(user_id)){
                         // return cala_auth(members,'card')
-                        
+
                         const data = cala_auth(members,member_roles,'card')
-                        console.log('data card',data);
+                        // console.log('data card',data);
                         return data
                     }
                 }
@@ -238,7 +238,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
     },
     async get_AzBlobInfo(azureInfo){
         const { accountName, accountKey, EndpointSuffix, containerName, directoryName, endSlash  } = azureInfo;
-        
+
         const connectionString = `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${accountKey};EndpointSuffix=${EndpointSuffix}`;
         //For store the file in buffer objects
         const multerConfig = {
@@ -268,7 +268,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
             return lastUpdated;
         }
     },
-    
+
     async hasChildren(...args) {
         const [ directoryPath, azureInfo ] = args;
         const { containerClient } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
@@ -279,7 +279,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         }
         return false;
     },
-    
+
     async getFiles(...args) {
         const [ path, azureInfo ] = args;
         // console.log('getFiles',azureInfo)
@@ -293,7 +293,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         // Get the array of directories and files.
         let entry = {};
         const directoriesAndFiles = [];
-    
+
         for await (const item of containerClient.listBlobsByHierarchy('/', { prefix: directoryName + path })) {
             if (item.kind === 'prefix') {
                 // @ts-ignore
@@ -322,7 +322,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         }
         return directoriesAndFiles;
     },
-    
+
     async deleteFoldersAndFiles(...args) {
         const [ data, path, names, azureInfo ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
@@ -362,7 +362,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
             throw response
         }
     },
-    
+
     async getDetails(...args) {
         let [ data, path, names, azureInfo ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
@@ -433,7 +433,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                             modified = lastUpdated;
                             isFile = false;
                         }
-    
+
                     }
                 }
                 fileDetails = {
@@ -458,7 +458,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
             throw response
         }
     },
-    
+
     async createFolder(...args) {
         let [ name, path, azureInfo ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
@@ -499,13 +499,13 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         }
         return response
     },
-    
+
     async rename(...args) {
         let [ name, newName, path, data, azureInfo ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
         let response = {};
         if (data[0].isFile) {
-    
+
             const sourceBlobClient = containerClient.getBlockBlobClient(directoryName + path + name);
             const targetBlobClient = containerClient.getBlockBlobClient(directoryName + path + newName);
             if (!await targetBlobClient.exists()) {
@@ -526,7 +526,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                         filterPath: path
                     }
                 ];
-    
+
                 response = { cwd: null, files: files, error: null, details: null };
                 return response
             }
@@ -538,7 +538,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                     code: "400"
                 };
                 let response = { cwd: null, files: null, details: null, error: errorMsg };
-                throw response    
+                throw response
             }
         }
         else {
@@ -583,7 +583,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         }
         return response
     },
-    
+
     async copyAndMoveFiles(...args) {
         let [ action, data, path, targetPath, renameFiles, azureInfo ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
@@ -598,7 +598,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                 if (!isRename) {
                     // Check the existance of the target directory, using the blob is available or not in that path.
                     // Here the prefix is "Files/Document/". that end '/' added for get the exact directory.
-                    // For example If this '/' is not added it wil take the "Files/Document" and "Files/Documents". 
+                    // For example If this '/' is not added it wil take the "Files/Document" and "Files/Documents".
                     for await (const { } of containerClient.listBlobsFlat({ prefix: directoryName + targetPath + item.name + endSlash })) {
                         isExist = true;
                         break;
@@ -611,7 +611,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                             code: "400"
                         };
                         let response = { cwd: null, files: null, details: null, error: errorMsg };
-                        throw response   
+                        throw response
                     }
                 }
                 if (!isExist) {
@@ -638,7 +638,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                                 }
                                 counter++;
                             }
-    
+
                         } else {
                             await destinationBlobClient.beginCopyFromURL(sourceBlobClient.url);
                         }
@@ -672,8 +672,8 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                             code: "400"
                         };
                         let response = { cwd: null, files: null, details: null, error: errorMsg };
-                        throw response 
-    
+                        throw response
+
                     }
                 }
                 if (!isExist) {
@@ -691,7 +691,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                             }
                             counter++;
                         }
-    
+
                     } else {
                         await destinationBlobClient.beginCopyFromURL(sourceBlobClient.url);
                     }
@@ -699,7 +699,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                         await sourceBlobClient.delete();
                     }
                     const properties = await destinationBlobClient.getProperties();
-    
+
                     const data = {
                         name: basename(destinationBlobClient.name),
                         size: properties.contentLength,
@@ -718,20 +718,20 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         response = { cwd: null, files: files, error: errorMsg, details: null };
         return response
     },
-    
-    
+
+
     async searchFiles(...args) {
         let [ path, azureInfo, searchString, caseSensitive, showHiddenItems ] = args;
         const { directoryName, containerClient, endSlash } = await strapi.service('api::storage.storage').get_AzBlobInfo(azureInfo);
         var currentPath = path;
         // console.log('searchString',searchString);
         searchString = searchString.replace(/\*/g, "");
-    
+
         const directories = [];
         const getDateModified = async (_directoryPath) => {
             return await strapi.service('api::storage.storage').getDateModified(_directoryPath, azureInfo);
         }
-    
+
         // Helper function` to search in folders
         const searchInFolder = async (prefix, directory) => {
             for await (const item of containerClient.listBlobsByHierarchy("/", { prefix })) {
@@ -770,7 +770,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         response = { cwd: null, files: directories, error: null, details: null };
         return response
     },
-    
+
     async byteConversion(fileSize) {
         try {
             const index = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];

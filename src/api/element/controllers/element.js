@@ -38,7 +38,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
         // if(!user_id) {
         //     return { updatedElement }
         // };
-        
+
         // // 开始生成返回给前端的数据
         // // 获取当前用户已阅读列表
         // const user = await strapi.entityService.findOne(
@@ -81,7 +81,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
         const user_id = Number(ctx.state.user.id); // 获取用户ID
         const element_id = Number(ctx.params.id); // 获取内容ID
         const favorite_id = Number(ctx.params.favorite_id); //获取收藏夹的ID
-        
+
         const user = await strapi.entityService.findOne(
             'plugin::users-permissions.user',
             user_id,
@@ -157,7 +157,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
             });
             const favorites_has_this_element_Ids = favorites_has_this_element.map(i => i.id);
             return { favorites_has_this_element_Ids, new_favorite_count };
-            
+
         } else {
             console.log('非法操作，该收藏夹不属于当前用户');
         }
@@ -167,7 +167,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
         const { id } = ctx.params;
         const user_id = Number(ctx.state.user.id); // 获取用户ID
         const element_id = Number(id); // 获取内容ID
-        
+
         const user = await strapi.entityService.findOne(
             'plugin::users-permissions.user',
             user_id,
@@ -176,9 +176,9 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
 
         const user_unliked_elements_ids = user.unliked_element?.map(i => i.id) || [];
         const have_unliked = user_unliked_elements_ids.includes(element_id);
-        console.log(have_unliked);
+        // console.log(have_unliked);
         if(have_unliked) {
-            console.log('已经踩过了');
+            // console.log('已经踩过了');
             return 'is_unliked'
         }
 
@@ -240,7 +240,7 @@ module.exports = createCoreController('api::element.element',({strapi}) => ({
         const user_liked_elements_ids = user.liked_element?.map(i => i.id) || [];
         const have_liked = user_liked_elements_ids.includes(element_id);
         if(have_liked) {
-            console.log('已经赞过了');
+            // console.log('已经赞过了');
             return 'is_liked'
         }
 

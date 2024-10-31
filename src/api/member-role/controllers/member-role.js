@@ -55,7 +55,7 @@ module.exports = createCoreController('api::member-role.member-role',({strapi}) 
                 const ACL = role_base.find(i => i.role === 'member')?.ACL
                 params.ACL = ACL;
             }
-            console.log('params',params);
+            // console.log('params',params);
             const create = await strapi.entityService.create('api::member-role.member-role',{
                 data: params,
                 populate: {
