@@ -15,6 +15,14 @@ module.exports = {
             // "config": {
             //     "auth": false,
             // }
+        },
+        {
+            "method": "POST",
+            "path": "/cards/check_paied",
+            "handler": "card.checkPaied",
+            // "config": {
+            //     "auth": false,
+            // }
         }
     ]
 }

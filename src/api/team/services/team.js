@@ -334,7 +334,7 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
     // 根据用户权限，对返回的数据执行过滤
     async filterByAuth(...args) {
         let [ team, user_id ] = args;
-        const curUserMember = team.members.find(i => i.by_user.id === user_id)
+        const curUserMember = team.member_roles?.map(i => i.members).flat(2)
         const getChannelAuth = async (channel_id) => {
             return await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
         }

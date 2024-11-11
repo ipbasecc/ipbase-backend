@@ -9,44 +9,97 @@ const { createCoreService } = require('@strapi/strapi').factories;
 module.exports = createCoreService('api::storage-file.storage-file',({strapi}) => ({
     async find_belongedInfo_byFileID(...args) {
         const [ file_id ] = args;
-        const file = await strapi.service('api::storage-file.storage-file').find_file_byID(file_id);;
-        if(file?.storage) {
-            let res = {};
-            // let { belonged_storage, belonged_user, belonged_card, belonged_project, rootProject } = res
-            const find_belonged = async (id) => {
-                const storage = await strapi.service('api::storage.storage').get_storage_byID(id);
-                if(storage){
-                    // if(!belonged_storage){
-                    //     belonged_storage = storage;
-                    // }
-                    return storage
-                }
-            }
-
-            const storage_id = file.storage?.id
-            const belonged = await find_belonged(storage_id);
-            if(belonged){
-                res.belonged_storage = belonged;
-                if(belonged.belonged_user){
-                    res.belonged_user = belonged.belonged_user
-                }
-                if(belonged.belonged_card){
-                    res.belonged_card = belonged.belonged_card;
-                    const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(belonged.belonged_card.id);
-                    if(belongedInfo){
-                        res.rootProject = belongedInfo.belonged_project
-                    }
-                }
-                if(belonged.belonged_project){
-                    res.belonged_project = belonged.belonged_project
-                }
-                if(belonged.storage){
-                    await find_belonged(belonged.storage.id)
-                }
-                // console.log('res result', res);
-                return res
+        const storage_populate = {
+            storage: {
+                fields: ['id']
+            },
+            belonged_project: {
+                fields: ['id']
+            },
+            belonged_card: {
+                fields: ['id']
+            },
+            belonged_user: {
+                fields: ['id']
+            },
+            creator: {
+                fields: ['id']
+            },
+            can_write_user: {
+                fields: ['id']
+            },
+            can_read_user: {
+                fields: ['id']
             }
         }
+        
+        const file = await strapi.db.query('api::storage-file.storage-file').findOne({
+            where: { id: file_id },
+            populate: {
+                storage: {
+                    populate: storage_populate
+                }
+            }
+        });
+        if(file){
+            const getStorage = async (storage_id) => {
+                return await strapi.db.query('api::storage.storage').findOne({
+                    where: { id: storage_id },
+                    populate: storage_populate
+                });
+            }
+            
+            // 创建一个新的 Promise 来处理递归查询
+            const findBelongedInfo = async (storage) => {
+                const result = {};
+                
+                const processStorage = async (storage) => {
+                    const uplevel_storage = await getStorage(storage.id);
+                    
+                    if(uplevel_storage.storage) {
+                        await processStorage(uplevel_storage.storage);
+                    }
+                    
+                    if(uplevel_storage.belonged_project) {
+                        result.belonged_project = uplevel_storage.belonged_project;
+                    }
+                    
+                    if(uplevel_storage.belonged_card) {
+                        result.belonged_card = uplevel_storage.belonged_card;
+                        const card_id = uplevel_storage.belonged_card.id;
+                        const card_BelongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
+                        if(card_BelongedInfo?.belonged_project) {
+                            result.belonged_project = card_BelongedInfo.belonged_project;
+                        }
+                    }
+                    
+                    if(uplevel_storage.belonged_user) {
+                        result.belonged_user = uplevel_storage.belonged_user;
+                    }
+                };
+        
+                await processStorage(storage);
+                return result;
+            };
+        
+            // 主逻辑
+            // console.log('file res', file);
+            if (!file.storage) {
+                return {};
+            }
+        
+            const result = {
+                belonged_storage: file?.storage,
+                ...(await findBelongedInfo(file?.storage))
+            };
+        
+            // console.log('belongedInfo res', result);
+            return result;
+        } else {
+            const ctx = strapi.requestContext.get();
+            ctx.throw(404,'没有找到要统计的文件')
+        }
+    
     },
     async find_file_byID(...args) {
         const [file_id] = args;
@@ -96,42 +149,58 @@ module.exports = createCoreService('api::storage-file.storage-file',({strapi}) =
                 res.superMember = _.includes(user_id);
             }
             
-            const calc_auth = (members,member_roles) => {
-                const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-                
-                if(is_blocked){
-                    ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
-                }
-    
-                res = strapi.service('api::project.project').calc_collection_auth(ACL,'card');
-            }
             if(belongedInfo.belonged_card){
-                const card = belongedInfo.belonged_card
-                const card_members = card.card_members.map(i => i.by_user.id);
-                if(card_members.includes(user_id)){
-                    // console.log('belonged_card service', res);
-                    const members = card.card_members;
-                    const member_roles = card.member_roles;
-                    calc_auth(members,member_roles);
-                } else {
-                    // console.log('rootProject service', res);
-                    const projcet = belongedInfo.rootProject;
-                    const member_roles = projcet.member_roles;
-                    const members = projcet.project_members;
-                    calc_auth(members,member_roles);
+                // 一个用户在card中只对应一个角色，这里使用findOne
+                const cardRole = await strapi.db.query('api::member-role.member-role').findOne({
+                    where: {
+                        by_card: belongedInfo.belonged_card.id,
+                        members: {
+                            by_user: user_id
+                        }
+                    },
+                    populate: {
+                        ACL: {
+                            populate: {
+                                fields_permission: true
+                            }
+                        }
+                    }
+                })
+                res = {
+                    ...res,
+                    ...cardRole.ACL?.find(i => i.collection === 'storage')
                 }
+                res.fields_permission = res.fields_permission.filter(i => i.modify)?.map(j => j.field);
             } else if(belongedInfo.belonged_project) {
-                const projcet = belongedInfo.belonged_project;
-                // console.log('belonged_project service', res);
-
-                const member_roles = projcet.member_roles;
-                const members = projcet.project_members;
-                calc_auth(members,member_roles);
+                const projectRoles = await strapi.db.query('api::member-role.member-role').findMany({
+                    where: {
+                        by_project: belongedInfo.belonged_project.id,
+                        members: {
+                            by_user: user_id
+                        }
+                    },
+                    populate: {
+                        ACL: {
+                            populate: {
+                                fields_permission: true
+                            }
+                        }
+                    }
+                })
+                const allStorageAuths = projectRoles.map(i => i.ACL?.find(i => i.collection === 'storage')).flat(2);
+                res = {
+                    ...res,
+                    read: allStorageAuths?.filter(i => i.read)?.length > 0,
+                    create: allStorageAuths?.filter(i => i.create)?.length > 0,
+                    modify: allStorageAuths?.filter(i => i.modify)?.length > 0,
+                    remove: allStorageAuths?.filter(i => i.remove)?.length > 0,
+                    fields_permission: [...new Set(allStorageAuths?.map(i => i.fields_permission)?.flat(2)?.filter(j => j.modify)?.map(k => k.field))]
+                }
             }
             // console.log('res service', res);
             return res
         } else {
             ctx.throw(404, '文件ID有误，无法找到关联信息')
         }
-    }
+    },
 }));

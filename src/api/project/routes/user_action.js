@@ -95,6 +95,22 @@ module.exports = {
             // "config": {
             //     "auth": true
             // }
-        }
+        },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/start_meet",
+            "handler": "project.startMeet",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/end_meet",
+            "handler": "project.endMeet",
+            // "config": {
+            //     "auth": true
+            // }
+        },
     ]
 }

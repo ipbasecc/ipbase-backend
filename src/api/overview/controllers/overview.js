@@ -98,6 +98,7 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             response.card_id = card.id
         }
         // console.log(params);
+        let media_size
         const new_overview = await strapi.entityService.create('api::overview.overview',{
             data: params,
             populate: {
@@ -107,6 +108,22 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             }
         })
         if(new_overview) {
+            if(new_overview.media){
+                process.nextTick(async () => {
+                media_size = new_overview.media.size || 0
+                    try {
+                        const params = {
+                              overview: new_overview,
+                              size: media_size,
+                              prv_size: 0
+                          }
+                        //   console.log('process.nextTick start', params);
+                      await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                    } catch (error) {
+                      console.error('After update processing error:', error);
+                    }
+                });
+            }
             response.data = new_overview
             strapi.$publish('overview:created', [ctx.room_name], response);
             return new_overview;
@@ -151,8 +168,22 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         }
 
         let auth;
+        let prv_media_size;
+        let prv_media_url;
         const overview = await strapi.service('api::overview.overview').find_overview_byID(id);
         if(overview){
+            // 已售出的内容不能删除
+            if(overview.card){
+                const canRemove = await strapi.service('api::card.card').checkRemoveLock({
+                    card_id: overview.card
+                })
+                if(canRemove.locked){
+                    return canRemove.message
+                }
+            }
+            
+            prv_media_size = overview.media.size;
+            prv_media_url = overview.media.url;
             const calc_info = await strapi.service('api::overview.overview').calc_overview_auth(overview,user_id);
             auth = calc_info.remove
         }
@@ -160,17 +191,24 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         if(auth) {
             let deleteOverview = await strapi.entityService.delete('api::overview.overview', id);
             if(deleteOverview) {
-                const response = {
-                    team_id: ctx.default_team?.id,
-                    data: {
-                        removed_overview: id
-                    }
-                }
-                strapi.$publish('overview:deleted', [ctx.room_name], response);
-                return response
             }
+            process.nextTick(async () => {
+                try {
+                    await strapi.service('api::overview.overview').remove_overview(overview)
+                } catch (error) {
+                  console.error('After update processing error:', error);
+                }
+            });
+            const response = {
+                team_id: ctx.default_team?.id,
+                data: {
+                    removed_overview: id
+                }
+            }
+            strapi.$publish('overview:deleted', [ctx.room_name], response);
+            return response
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
     },
     async update(ctx) {
@@ -189,27 +227,40 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
 
         let auth;
         let fields_permission = [];
+        let prv_media_size
+        let prv_media_url
         const overview = await strapi.service('api::overview.overview').find_overview_byID(id);
         if(overview){
-            const calc_info = await strapi.service('api::overview.overview').calc_overview_auth(overview,user_id);
-            // console.log('calc_info',calc_info);
-            auth = calc_info.modify
-            fields_permission = calc_info.fields_permission
+            prv_media_size = overview.media?.size || 0
+            prv_media_url = overview.media?.url;
+            // console.log('permission start');
+            const permission = await strapi.service('api::overview.overview').calc_overview_auth(overview,user_id);
+            // console.log('permission end', permission);
+            auth = permission.modify
+            fields_permission = permission.fields_permission
         }
 
         // console.log('fields_permission',fields_permission);
         if(auth) {
+            let media_size
             let params = strapi.service('api::overview.overview').process_updateOverview_params(data,fields_permission);
             // console.log(data,params);
             const update_overview = await strapi.entityService.update('api::overview.overview', id,{
                 data: params,
                 populate: {
                     media: {
-                        fields: ['id','ext','url']
+                        fields: ['id','ext','url', 'size']
+                    },
+                    project: {
+                        fields: ['id','total_filesize']
+                    },
+                    card: {
+                        fields: ['id']
                     }
                 }
             });
             if(update_overview?.media?.id && !update_overview?.mps_info){
+                media_size = update_overview.media.size || 0
                 const mediaURL = strapi.service('api::ali.ali').processUrl(update_overview?.media?.url, update_overview?.media?.ext);
                 // console.log('mediaURL',mediaURL)
                 if(mediaURL){
@@ -224,6 +275,27 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                 data: update_overview
             }
             strapi.$publish('overview:updated', [ctx.room_name], response);
+            
+            process.nextTick(async () => {
+                try {
+                    const params = {
+                          overview: update_overview,
+                          size: media_size || 0,
+                          prv_size: prv_media_size || 0
+                      }
+                    //   console.log('process.nextTick start', params);
+                  await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                  if(prv_media_url){
+                    const params = {
+                      url: prv_media_url,
+                      urls: null,
+                    }
+                    await strapi.service('api::ali.ali').removeObject(params)
+                  }
+                } catch (error) {
+                  console.error('After update processing error:', error);
+                }
+            });
             return update_overview
         } else {
             ctx.throw(403, '您无权执行此操作')

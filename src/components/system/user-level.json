@@ -1,0 +1,40 @@
+{
+  "collectionName": "components_system_user_levels",
+  "info": {
+    "displayName": "user level",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "enumeration",
+      "enum": [
+        "Normal",
+        "Professional",
+        "Enterprise"
+      ],
+      "default": "Normal"
+    },
+    "team_members_limit": {
+      "type": "integer"
+    },
+    "team_storage_max_limit": {
+      "type": "biginteger"
+    },
+    "project_members_limit": {
+      "type": "integer"
+    },
+    "project_total_cards_limit": {
+      "type": "integer"
+    },
+    "project_storage_max_limit": {
+      "type": "integer"
+    },
+    "singal_file_limit": {
+      "type": "integer"
+    },
+    "enable_functions": {
+      "type": "json"
+    }
+  }
+}

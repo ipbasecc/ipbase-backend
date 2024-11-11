@@ -1,0 +1,15 @@
+{
+  "kind": "collectionType",
+  "collectionName": "alis",
+  "info": {
+    "singularName": "ali",
+    "pluralName": "alis",
+    "displayName": "ali",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {}
+}

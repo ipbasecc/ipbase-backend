@@ -152,14 +152,31 @@ module.exports = createCoreController('api::column.column',({strapi}) => ({
                 populate: column_populate
             });
             if(column_update) {
+                // 分栏下的card，ws不发送，因为用户权限不同，应该发送不同的数据，所以只发送id
+                // 前端用已有的card去重组数据，如果没有对应id的card，前端重新获取对应card
+                // 如果是课程，ws不发送未发布的内容
+                const publishedCards = column_update.cards.filter(i => i.type !== 'classroom' || i.published)
+                // console.log(column_update.cards?.length)
+                let wsData
+                if(belongedInfo.kanban?.type === 'classroom'){
+                    wsData = {
+                        ...column_update,
+                        cardSort: publishedCards.length > 0 ? publishedCards.map(i => i.id) : []
+                    }
+                } else {
+                    wsData = {
+                        ...column_update,
+                        cardSort: column_update.cards.length > 0 ? column_update.cards.map(i => i.id) : []
+                    }
+                }
+                // 删掉cards，ws不能发送
+                // 前端当前用户使用返回数据更新，其它用户使用cardSort重组cards数据
+                delete wsData.cards
                 strapi.$publish('column:updated', [ctx.room_name], {
                     team_id: ctx.default_team?.id,
-                    data: column_update
+                    data: wsData,
+                    updator: user_id
                 });
-                // todo 待验证：根据用户权限过滤card数据
-                if(column_update.cards?.length > 0){
-                    column_update.cards = await strapi.service('api::column.column').filterCardsDataByAuth(column_update.cards, user_id, ACL, isSuper_member);
-                }
                 return column_update
             } else {
                 return '更新时出错，请刷新页面后重新尝试'

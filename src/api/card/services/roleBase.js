@@ -1,5 +1,5 @@
 module.exports = {
-    roleBase: async () => {
+    roleBase: () => {
         const { schedule } = require('../../project/services/role_atom/schedule');
         const { schedule_event } = require('../../project/services/role_atom/schedule-event');
         const role_schedule = schedule();
@@ -17,6 +17,10 @@ module.exports = {
                         "fields_permission": [
                             {
                                 "field": "name",
+                                "modify": true
+                            },
+                            {
+                                "field": "description",
                                 "modify": true
                             },
                             {
@@ -274,6 +278,10 @@ module.exports = {
                                 "modify": true
                             },
                             {
+                                "field": "description",
+                                "modify": true
+                            },
+                            {
                                 "field": "type",
                                 "modify": true
                             },
@@ -525,6 +533,10 @@ module.exports = {
                         "fields_permission": [
                             {
                                 "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "description",
                                 "modify": false
                             },
                             {
@@ -782,6 +794,10 @@ module.exports = {
                                 "modify": false
                             },
                             {
+                                "field": "description",
+                                "modify": false
+                            },
+                            {
                                 "field": "type",
                                 "modify": false
                             },
@@ -1033,6 +1049,10 @@ module.exports = {
                         "fields_permission": [
                             {
                                 "field": "name",
+                                "modify": false
+                            },
+                            {
+                                "field": "description",
                                 "modify": false
                             },
                             {

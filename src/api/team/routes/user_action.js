@@ -56,5 +56,15 @@ module.exports = {
             //     "auth": true
             // }
         },
+        {
+          method: 'POST',
+          path: '/jitsi/project_meet_auth',
+          handler: 'team.projectMeetAuth'
+        },
+        {
+          method: 'GET',
+          path: '/teams/:team_id/members',
+          handler: 'team.listMembers'
+        }
     ]
 }

@@ -49,6 +49,13 @@
     },
     "jsonContent": {
       "type": "json"
+    },
+    "meeting": {
+      "type": "boolean",
+      "default": false
+    },
+    "private_meets": {
+      "type": "json"
     }
   }
 }

@@ -12,45 +12,39 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         const user_id = Number(ctx.state.user.id);
         if(!user_id){
             ctx.throw(400, '请先登陆')
-        } else {
-            let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
-            if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
-            }
         }
-
-        let teams = await strapi.entityService.findMany('api::team.team',{
-            filters: {
+        let teams = await strapi.db.query('api::team.team').findMany({
+            where: {
                 members: {
-                    by_user: {
-                        id: user_id
-                    }
+                    by_user: user_id
                 }
             },
             populate: {
                 team_logo: {
-                    fields: ['id','url','ext']
+                    fields: ['id', 'url', 'ext']
                 },
-                members: {
+                member_roles: {
                     populate: {
-                        by_user: {
-                            fields: ['id']
-                        },
-                        member_roles: {
-                            fields: ['subject']
+                        members: {
+                            filters: {
+                                by_user: user_id // 只返回 by_user 是 user_id 的 members
+                            }
                         }
                     }
                 }
             }
         })
+        
         if(teams){
             let filter = teams.filter(i => i.publishedAt);
             // @ts-ignore
             filter = filter?.length > 0 && filter.map((i) => {
+                const roles = i.member_roles.map(j => j.subject)
+                // console.log('roles',roles)
+                
                 const user_roles = i.members?.filter(i => i.by_user.id === user_id).map(i => i.member_roles).flat(2);
-                // console.log('user_roles',user_roles)
-                const unconfirmeds = user_roles.filter(j => j.subject === 'unconfirmed');
-                const blockeds = user_roles.filter(j => j.subject === 'blocked');
+                const unconfirmeds = roles.includes('unconfirmed')
+                const blockeds = roles.includes('blocked')
                 // console.log('unconfirmeds',unconfirmeds)
                 if(unconfirmeds?.length > 0){
                     delete i.members // 未正式加入的成员，不要向其发送成员数据
@@ -73,44 +67,43 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     },
     async findOne(ctx) {
         await this.validateQuery(ctx);
-        const user_id = Number(ctx.state.user.id);
+        const user_id = Number(ctx.user?.id);
         let team_id = Number(ctx.params.id);
         
         let user
         if(!user_id){
             ctx.throw(400, '请先登陆')
-        } else {
-            user = user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, {
-                populate: {
-                    default_team: {
-                        fields: ['id']
-                    }
-                }
-            });
-            if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
-            }
         }
         const userMemberRoles = await strapi.service('api::team.team').getMemberRolesByTeam(user_id, team_id);
         if(userMemberRoles?.length > 0){
-            const populate = strapi.service('api::team.team').populate_template();
-            let team = await strapi.entityService.findOne('api::team.team',team_id,{
-                populate: populate
+            let team = await strapi.db.query('api::team.team').findOne({
+                where: {
+                    id: team_id,
+                    members: {
+                        by_user: user_id
+                    }
+                },
+                populate: {
+                    member_roles: {
+                        filter: {
+                            members: {
+                                by_user: user_id
+                            }
+                        }
+                    },
+                    team_channels: true
+                }
             })
+            // console.lgo('team', team)
             if(team){
                 if(!team.publishedAt){
-                    ctx.throw(404, '改团队已被归档')
+                    ctx.throw(404, '该团队已被归档')
                 } else {
+                    const roles = team.member_roles?.map(i => i.subject) || []
                     // @ts-ignore
-                    if(team.team_channels?.length > 0){
-                        // @ts-ignore
-                        team.team_channels = team.team_channels.filter(i => i.publishedAt);
-                    }
-                    const roles_names = user_memberRoles_byTeam.map(i => i.subject);
-                    const isUnconfirmed = roles_names.includes('unconfirmed');
-                    const isBlocked = roles_names.includes('blocked');
-                    // console.log('开始ws', isUnconfirmed, isBlocked)
-                    // console.log('status', isUnconfirmed, isBlocked)
+                    const isUnconfirmed = roles.includes('unconfirmed');
+                    const isBlocked = roles.includes('blocked');
+                    
                     if(isUnconfirmed){
                         const res = {
                             id: team.id,
@@ -329,6 +322,104 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 });
                 return res
             }
+        }
+    },
+    async listMembers(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.user.id);
+        let { team_id } = ctx.params;
+        const { offset, limit } = ctx.query;
+        
+        // console.log(team_id, offset, limit)
+        let user
+        if(!user_id){
+            ctx.throw(400, '请先登陆')
+        }
+        let team = await strapi.db.query('api::team.team').findOne({
+            where: {
+                id: team_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                member_roles: {
+                    filter: {
+                        members: {
+                            by_user: user_id
+                        }
+                    },
+                    populate: {
+                        members: {
+                            by_user: user_id
+                        }
+                    }
+                },
+                team_channels: true
+            }
+        })
+        // console.log(team)
+        if(team){
+            if(!team.publishedAt){
+                ctx.throw(403, '改团队已被归档')
+            } else {
+                let roles = []
+                for(const role of team.member_roles) {
+                    if(role.members?.length > 0){
+                        roles.push(role)
+                    }
+                }
+                // console.log('roles', roles)
+                const isUnconfirmed = roles.map(i => i.subject).includes('unconfirmed');
+                const isBlocked = roles.map(i => i.subject).includes('blocked');
+                
+                if(!isUnconfirmed && !isBlocked){
+                    // console.log('query')
+                    const totalCount = await strapi.db.query('api::member.member').count({
+                        where: {
+                            by_team: team.id // 统计条件
+                        }
+                    });
+                    const members = await strapi.db.query('api::member.member').findMany({
+                        where: {
+                            by_team: team.id
+                        },
+                        offset: offset - 1,
+                        limit: limit,
+                        populate: {
+                            by_user: {
+                                select: [ 'id','username', 'mm_profile'],
+                                populate: {
+                                    profile: {
+                                        populate: {
+                                            avatar: {
+                                                select: ['id','ext','url']
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            member_roles: true
+                        }
+                    }).catch((err) => {
+                        console.error(err, 'error when list team members')
+                    })
+                    // console.log('query end', members)
+                    if(members) {
+                        // 计算 hasMore 字段
+                        const hasMore = totalCount > offset + limit;
+                            return {
+                                members,
+                                totalCount,
+                                hasMore
+                            };
+                    }
+                } else {
+                    ctx.throw(403, '您无权查访问内容')
+                }
+            }
+        } else {
+            ctx.throw(403, '仅限团队成员访问')
         }
     },
     async genInvite(ctx) {
@@ -977,6 +1068,73 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 return {documents,total,page,per_page}
             } else {
                 ctx.throw(402, '该内容仅限团队成员可见')
+            }
+        }
+    },
+    async projectMeetAuth(ctx) {
+        const { user } = ctx.state; 
+        const user_id = Number(ctx.state.user.id);
+        const { data } = ctx.request.body
+        
+        if(!data.project_id){
+            ctx.throw(403, '您无权参与此会议')
+        }else{
+            const project_id = data.project_id
+            const roles = await strapi.db.query('api::member-role.member-role').findMany({
+              where: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+              }
+            });
+            if(roles?.length > 0){
+                const blacklist = ['blocked', 'unconfirmed']
+                let inBlacklist = roles.map(i => i.subject).some(j => blacklist.includes(j))
+                if(!inBlacklist){
+                    const user = strapi.entityService.findOne('plugin::users-permissions.user',user_id,{
+                        fields: ['id','username','email'],
+                        populate: {
+                            profile: {
+                                populate: {
+                                    avatar: {
+                                        fields: ['ext','url']
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    let context_user = {
+                        name: user.username,
+                        email: user.email,
+                        moderator: true // 可以根据需要设置权限
+                    }
+                    if(user?.profile?.avatar?.url){
+                        context_user.avatar = user.profile.avatar.url
+                    }
+                    try {
+                      const jwt = require('jsonwebtoken');
+                      // 生成 Jitsi 专用的 JWT
+                      const jitsiJWT = jwt.sign({
+                        context: {
+                          user: context_user
+                        },
+                        aud: process.env.JITSI_AUD,
+                        iss: process.env.JITSI_APP_ID, // 从环境变量获取
+                        sub: process.env.JITSI_DOMAIN, // 从环境变量获取
+                        exp: Math.round(Date.now() / 1000) + 7200, //2小时
+                      }, process.env.JITSI_JWT_SECRET);
+                
+                      // 3. 返回 Jitsi JWT
+                      return ctx.send({ token: jitsiJWT });
+                    } catch (error) {
+                      ctx.throw(500, error);
+                    }
+                } else {
+                    ctx.throw(403, '您无权执行此操作')
+                }
+            } else {
+                ctx.throw(403, '您无权执行此操作')
             }
         }
     }

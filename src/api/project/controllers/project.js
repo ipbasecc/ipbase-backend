@@ -1578,5 +1578,109 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 status: 'removed'
             }
         }
+    },
+    async startMeet(ctx) {
+        await this.validateQuery(ctx);
+        const { project_id } = ctx.params;
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        } else if(!project_id){
+            ctx.throw(403, '请提供项目ID')
+        } else {
+            const roles = await strapi.db.query('api::member-role.member-role').findMany({
+              where: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+              }
+            });
+            if(roles?.length > 0){
+                const blacklist = ['blocked', 'unconfirmed']
+                let inBlacklist = roles.map(i => i.subject).some(j => blacklist.includes(j))
+                if(!inBlacklist){
+                    const updateProject = await strapi.entityService.update('api::project.project', project_id, {
+                        data: {
+                            meeting: true
+                        },
+                        populate: {
+                            by_team: {
+                                fields: ['id']
+                            }
+                        }
+                    })
+                    if(updateProject){
+                        const team_id = updateProject?.by_team.id
+                        strapi.$publish('project:project_modify', [`team_room_${team_id}`], {
+                            team_id: team_id,
+                            project_id: updateProject.id,
+                            data: {
+                                project: updateProject
+                            }
+                        });
+                        return updateProject
+                    } else {
+                        ctx.throw(500, '未知错误')
+                    }
+                } else {
+                    ctx.throw(403, '您无权执行此操作')
+                }
+            } else {
+                ctx.throw(403, '您无权执行此操作')
+            }
+        }
+    },
+    async endMeet(ctx) {
+        await this.validateQuery(ctx);
+        const { project_id } = ctx.params;
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        } else if(!project_id){
+            ctx.throw(403, '请提供项目ID')
+        } else {
+            const roles = await strapi.db.query('api::member-role.member-role').findMany({
+              where: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+              }
+            });
+            if(roles?.length > 0){
+                const blacklist = ['blocked', 'unconfirmed']
+                let inBlacklist = roles.map(i => i.subject).some(j => blacklist.includes(j))
+                if(!inBlacklist){
+                    const updateProject = await strapi.entityService.update('api::project.project', project_id, {
+                        data: {
+                            meeting: false
+                        },
+                        populate: {
+                            by_team: {
+                                fields: ['id']
+                            }
+                        }
+                    })
+                    if(updateProject){
+                        const team_id = updateProject?.by_team.id
+                        strapi.$publish('project:project_modify', [`team_room_${team_id}`], {
+                            team_id: team_id,
+                            project_id: updateProject.id,
+                            data: {
+                                project: updateProject
+                            }
+                        });
+                        return updateProject
+                    } else {
+                        ctx.throw(500, '未知错误')
+                    }
+                } else {
+                    ctx.throw(403, '您无权执行此操作')
+                }
+            } else {
+                ctx.throw(403, '您无权执行此操作')
+            }
+        }
     }
 }));

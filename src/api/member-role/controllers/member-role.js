@@ -21,7 +21,7 @@ module.exports = createCoreController('api::member-role.member-role',({strapi}) 
             const project_id = data.by_project;
             const project = await strapi.service('api::project.project').find_projectByID(project_id);
             if(project){
-                console.log('authed_fields');
+                // console.log('authed_fields');
                 const {authed_fields} = strapi.service('api::project.project').clac_project_auth(project,user_id);
                 if(authed_fields?.includes('manageRole')){
                     auth = true

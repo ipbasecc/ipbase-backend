@@ -22,9 +22,11 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
         let auth;
         let ACL;
         let isSuper_member;
+        let kanban_type
         const belongedInfo = await strapi.service('api::kanban.kanban').find_belongedInfo_byKanbanID(kanban_id);
         // console.log('belongedInfo kanban',belongedInfo);
         if(belongedInfo){
+            kanban_type = belongedInfo.kanban_type
             let members;
             const calc_auth = (members,member_roles,collection) => {
                 const {ACL:__ACL, is_blocked, role_names} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
@@ -62,7 +64,7 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             // const room = `kanban_${kanban_id}`;
             // const ydoc = new Y.Doc();
             // strapi.provider(room, ydoc);
-            let kanban = await strapi.service('api::kanban.kanban').get_kanbanSourceData_byID(kanban_id);
+            let kanban = await strapi.service('api::kanban.kanban').get_kanbanSourceData_byID(kanban_id, kanban_type, user_id);
             if(kanban){
                 const processed_data = strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(kanban, user_id, ACL, isSuper_member, belongedInfo);
                 return processed_data

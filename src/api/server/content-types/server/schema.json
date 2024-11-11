@@ -35,6 +35,9 @@
     },
     "notification": {
       "type": "text"
+    },
+    "meet_site": {
+      "type": "text"
     }
   }
 }

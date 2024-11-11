@@ -11,15 +11,15 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         const data = ctx.request.body;
-
-        // console.log('data data', data);
-
         if(!data){
             ctx.throw(500, '需要提供修改数据')
         }
         if(!user_id){
             ctx.throw(500, '请先登陆')
         }
+        
+        let file_for_get_project
+        let total_size = 0
         const batchCreate = async (Arr) => {
             const promises = Arr.map(async (i) => {
               try {
@@ -31,24 +31,16 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                     owner: user_id
                   },
                   populate: {
-                    owner: {
-                        fields: ['id','username','mm_profile'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','url','ext']
-                                    }
-                                }
-                            }
-                        }
-                    },
                     file: {
-                        fields: ['id','url','ext']
+                        fields: ['id','url','ext','size']
                     }
                   }
                 });
                 res.storage_id = i.storage_id
+                if(!file_for_get_project){
+                    file_for_get_project = res.id
+                }
+                total_size = total_size + res.file.size
                 return res;
               } catch (error) {
                 console.error('Error creating entity:', error);
@@ -64,25 +56,43 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
               .filter((result) => result.status === 'fulfilled')
               // @ts-ignore
               .map((result) => result.value);
-          
-            let response = {
-                team_id: ctx.default_team?.id,
-                data: successfulResults
-            }
-            strapi.$publish('file:batchCreated', [ctx.room_name], response);
             return successfulResults;
           };
           
-          const result = await batchCreate(data);
-          if(result){
-              // console.log('result result', result);
+        const result = await batchCreate(data);
+        if(result){
+            // console.log('result result', result);
             let response = {
                 team_id: ctx.default_team?.id,
                 data: result
             }
-            strapi.$publish('file:removed', [ctx.room_name], response);
+            strapi.$publish('file:batchCreated', [ctx.room_name], response);
+            
+            process.nextTick(async () => {
+                try {
+                    // console.log('file_for_get_project', file_for_get_project, total_size);
+                    const belongedInfo = await strapi.service('api::storage-file.storage-file').find_belongedInfo_byFileID(file_for_get_project);
+                    // console.log('process.nextTick belongedInfo', belongedInfo);
+                    if(belongedInfo){
+                        // console.log('process.nextTick belongedInfo');
+                        const project = belongedInfo.belonged_project
+                        if(project){
+                            const params = {
+                                  project: project,
+                                  size: total_size,
+                                  prv_size: 0
+                              }
+                            //   console.log('process.nextTick start', params);
+                          await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                        }
+                    }
+                } catch (error) {
+                  console.error('After update processing error:', error);
+                }
+            });
+            
             return result
-          }
+        }
     },
     async delete(ctx) {
         await this.validateQuery(ctx);
@@ -101,20 +111,52 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         }
         // console.log('auth result', auth);
         if(auth){
-            const remove = await strapi.entityService.delete('api::storage-file.storage-file',id);
-            if(remove){
-                let response = {
-                    team_id: ctx.default_team?.id,
-                    data: {
-                        removed_file_id: id
-                    }
+            // 鉴权成功后，先直接通知前端删除成功，因为要执行更新存储大小的操作，所以不能提前删除，否则后续执行时会找不到文件从而无法统计出大小
+            let response = {
+                team_id: ctx.default_team?.id,
+                data: {
+                    removed_file_id: id
                 }
-                strapi.$publish('file:removed', [ctx.room_name], response);
-                return 'OK'
-            } else {
-                ctx.throw(403, '您无权删除此文件')
             }
+            strapi.$publish('file:removed', [ctx.room_name], response);
+            process.nextTick(async () => {
+                try {
+                    // console.log('process.nextTick start');
+                    const belongedInfo = await strapi.service('api::storage-file.storage-file').find_belongedInfo_byFileID(id);
+                    const storage_file = await strapi.db.query('api::storage-file.storage-file').findOne({
+                        where: {
+                            id: id
+                        },
+                        populate: {
+                            file: {
+                                fields: ['id','size']
+                            }
+                        }
+                    })
+                    // console.log('process.nextTick belongedInfo', belongedInfo);
+                    if(belongedInfo){
+                        // console.log('process.nextTick belongedInfo');
+                        const project = belongedInfo.belonged_project || belongedInfo.rootProject
+                        if(project){
+                            const params = {
+                                  project: project,
+                                  size: 0,
+                                  prv_size: storage_file.file?.size || 0
+                              }
+                            //   console.log('process.nextTick start', params);
+                          await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                            await strapi.plugins.upload.services.upload.remove({
+                              id: { $in: [storage_file.file?.id] }  // fileIds 是一个 ID 数组
+                            });
+                        }
+                    }
+                } catch (error) {
+                  console.error('After update processing error:', error);
+                }
+                // 大小统计结束后，删除文件
+                await strapi.entityService.delete('api::storage-file.storage-file',id);
+            });
+            return 'OK'
         }
-
     }
 }));

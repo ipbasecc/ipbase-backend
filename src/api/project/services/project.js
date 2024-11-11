@@ -114,11 +114,9 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
     },
     calc_field_ACL(...args) {
       const [ACL,collection,field] = args;
-      const collection_ACL = ACL.map(i => i.ACL.find(p => p.collection === collection));
+      const collection_ACL = ACL.filter(p => p.collection === collection);
       
-      const field_ACL = collection_ACL.map(i => i.fields_permission.find(f => f.field === field).modify)?.includes(true);
-
-      return field_ACL
+      return collection_ACL.map(i => i.fields_permission).flat(2).filter(j => j.modify && j.field === field)?.length > 0
     },
     clac_authed_fields(...args) {
       const [ACL,collection] = args;
@@ -225,13 +223,43 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
         // console.log('authed_fields ACL',authed_fields);
         return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
     },
-    clac_projectCard_auth(...args){
-        const [ project, user_id ] = args;
-        const members = project.project_members;
-        const member_roles = project.member_roles
-        const { ACL, is_blocked, role_names } = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-        const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'card');
-        const authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'card');
+    async clac_projectCard_auth(...args){
+        const [ project_id, user_id, collection ] = args;
+        
+        const project_roles_by_user = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        
+        // console.log('project_roles_by_user', project_roles_by_user)
+        const role_names = project_roles_by_user.map(i => i.subject)
+        const is_blocked = !!project_roles_by_user.find(i => i.subject === 'blocked')
+        const ACL = project_roles_by_user.map(i => i.ACL).flat(2);
+        
+        const collectionAuth = (_collection) => {
+            const ACLs = ACL.filter(i => i.collection === _collection);
+            console.log('project_roles_by_user ACLs', ACLs)
+            return {
+                read: ACLs.filter(i => i.read)?.length > 0,
+                create: ACLs.filter(i => i.create)?.length > 0,
+                modify: ACLs.filter(i => i.modify)?.length > 0,
+                remove: ACLs.filter(i => i.delete)?.length > 0,
+                authed_fields: [...new Set(ACLs.map(i => i.fields_permission).flat(2)?.filter(i => i.modify)?.map(j => j.field))]
+            }
+        }
+        
+        const { read, create, modify, remove, authed_fields } = collectionAuth(collection);
         // console.log('ACL',ACL);
         return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
     },
@@ -814,7 +842,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
             
         let res = {}
         const { read } = getProjectAuth(project, user_id);
-        console.log('getProjectAuth auth',read);
+        // console.log('getProjectAuth auth',read);
         if(read){
             return {
                 ...project,
@@ -833,6 +861,38 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
             }
         }
         return res
+    },
+    async updateProjectTotalFileSize(args) {
+        
+        const {overview,project,size,prv_size} = args;
+        
+        const updateTotleSize = async (project_id) => {
+            await strapi.db.connection
+              .table('projects')
+              .where('id', project_id)
+              .update({
+                total_filesize: strapi.db.connection.raw('GREATEST(0, total_filesize + ?)', [size - prv_size])
+              });
+        }
+        let project_id
+        if(project){
+            project_id = project.id
+        }
+        if(project_id){
+            await updateTotleSize(project_id)
+        }
+        if(overview?.project){
+            project_id = overview.project.id
+        }
+        if(!project_id && overview?.card){
+            const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(overview.card.id);
+            if(belongedInfo.belonged_project){
+                project_id = belongedInfo.belonged_project.id
+            }
+        }
+        if(!project_id && project){
+            project_id = project.id
+        }
     }
   }));
   

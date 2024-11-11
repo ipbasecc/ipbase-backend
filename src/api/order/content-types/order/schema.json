@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "order",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "jeepay_order": {
+      "type": "json"
+    },
+    "purpose": {
+      "type": "text"
+    },
+    "orderState": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 6
+    },
+    "card": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::card.card",
+      "inversedBy": "orders"
+    },
+    "buyer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "order"
+    },
+    "mchOrderNo": {
+      "type": "text"
+    },
+    "payOrderId": {
+      "type": "string"
+    }
+  }
+}

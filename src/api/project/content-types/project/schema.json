@@ -153,6 +153,16 @@
       "relation": "oneToMany",
       "target": "api::budget.budget",
       "mappedBy": "project"
+    },
+    "meeting": {
+      "type": "boolean",
+      "default": false
+    },
+    "private_meets": {
+      "type": "json"
+    },
+    "total_filesize": {
+      "type": "decimal"
     }
   }
 }

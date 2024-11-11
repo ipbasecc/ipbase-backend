@@ -12,6 +12,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
     async findOne(ctx) {
         const user_id = Number(ctx.state.user.id);
         const { id } = ctx.params;
+        const storage_id = id
         
         const { share_code, share_by } = ctx.request.query;
         if((!share_code || !share_by) && (share_code || share_by)){
@@ -29,69 +30,31 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
         }
 
         let auth
-        // const { auth, fields_permission } = strapi.service('api::document.document').cala_auth(document_id,user_id);
-        const res = await strapi.service('api::storage.storage').calc_collection_auth(id,user_id);
-        if(res){
-            auth = res.auth?.read;
+        const checkAuth = 'read'
+        const selfAuth = await strapi.service('api::storage.storage').storageSelfAuth({storage_id,user_id,checkAuth});
+        auth = selfAuth.read
+        if(!auth){
+            const assign = 'storage'
+            const collections = await strapi.service('api::storage.storage').getCollections({
+                assign, user_id, storage_id
+            })
+            auth = collections.filter(i => i.modify)?.length > 0
         }
         
         if(auth){
-            const storage = await strapi.entityService.findOne('api::storage.storage',id,{
+            return await strapi.entityService.findOne('api::storage.storage',id,{
+                fields: ['id','name'],
                 populate: {
-                    files: true,
                     sub_folders: true,
                     storage_files: {
                         populate: {
                             file: {
                                 fields: ['id','name','url','ext']
                             },
-                            owner: {
-                                fields: ['id','username'],
-                                populate: {
-                                    profile: {
-                                        populate: {
-                                            avatar: {
-                                                fields: ['id','name','url','ext']
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     },
-                    creator: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','ext','url']
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    can_read_user: {
-                        fields: ['id']
-                    },
-                    can_wtite_user: {
-                        fields: ['id']
-                    }
                 }
             })
-            if(storage) {
-                delete storage.azureInfo
-                // console.log('storage storage', storage);
-                // return storage
-                if(storage.private) {
-                    const can_read_user = storage.can_read_user.length > 0 && storage.can_read_user.map(i => i.id);
-                    if(can_read_user.includes(user_id) || storage.creator.id === user_id) {
-                        return storage
-                    }
-                } else {
-                    return storage
-                }
-            }
         } else {
             ctx.throw(403, '您无权访问该数据')
         }
@@ -107,14 +70,16 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
             ctx.throw(401, '您无权执行此操作')
         }
         let auth
+        const checkAuth = 'write'
         const storage = await strapi.service('api::storage.storage').get_storage_byID(id);
-        if(storage?.private){
-            auth = storage.creator.id === user_id || storage.belonged_user.id === user_id
-        } else {
-            const res = await strapi.service('api::storage.storage').calc_collection_auth(id,user_id);
-            if(res){
-                auth = res.auth?.modify;
-            }
+        const selfAuth = await strapi.service('api::storage.storage').storageSelfAuth({storage_id,user_id,checkAuth});
+        auth = selfAuth.write
+        if(!auth){
+            const assign = 'storage'
+            const collections = await strapi.service('api::storage.storage').getCollections({
+                assign, user_id, storage_id
+            })
+            auth = collections.filter(i => i.modify)?.length > 0
         }
 
         if (auth && storage) {
@@ -122,7 +87,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
             let params = {};
             if(body.data.new_storageFiles) {
                 let new_file_ids = body.data.new_storageFiles.map(i => Number(i));
-                params.files = [...old_file_ids.filter(i => !new_file_ids.includes(i)),...new_file_ids]
+                params.files = [...old_file_ids.filter(i => !new_file_ids.includes(i)),...new_file_ids];
             }
             if(body.data.remove_storageFiles) {
                 let remove_file_ids = body.data.remove_storageFiles.map(i => Number(i));
@@ -136,50 +101,19 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
             }
             const update = await strapi.entityService.update('api::storage.storage',id,{
                 data: params,
+                fields: ['id','name'],
                 populate: {
-                    files: true,
                     sub_folders: true,
                     storage_files: {
                         populate: {
                             file: {
                                 fields: ['id','name','url','ext']
                             },
-                            owner: {
-                                fields: ['id','username'],
-                                populate: {
-                                    profile: {
-                                        populate: {
-                                            avatar: {
-                                                fields: ['id','name','url','ext']
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
-                    },
-                    creator: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','ext','url']
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    can_read_user: {
-                        fields: ['id']
-                    },
-                    can_wtite_user: {
-                        fields: ['id']
                     }
                 }
             })
             if(update) {
-                delete update.azureInfo
                 let response = {
                     team_id: ctx.default_team?.id,
                     data: update
@@ -217,77 +151,39 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
         }
 
         let auth;
-        const calc_auth = (members,member_roles) => {
-            const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-
-            if(is_blocked){
-                ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
-            }
-
-            const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'storage');
-            auth = create
-        }
-
         if(assign_card){
-            const card  = await strapi.service('api::card.card').find_cardByID(assign_card);
-            const members = card.card_members;
-            const member_roles = card.member_roles;
-            if(members.filter(i => i.by_user.id === user_id)?.length > 0){
-                calc_auth(members,member_roles)
-            }
-
+            const assign = 'card'
+            const collections = await strapi.service('api::storage.storage').getCollections({
+                assign,user_id,card_id
+            })
+            auth = collections.filter(i => i.create)?.length > 0
         }
         if(assign_project){
-            const project  = await strapi.service('api::project.project').find_projectByID(assign_project);
-            const members = project.project_members;
-            const member_roles = project.member_roles;
-            if(members.filter(i => i.by_user.id === user_id)?.length > 0){
-                calc_auth(members,member_roles)
-            }
+            const assign = 'project'
+            const collections = await strapi.service('api::storage.storage').getCollections({
+                assign,user_id,project_id
+            })
+            auth = collections.filter(i => i.create)?.length > 0
         }
         if(assign_storage){
-            const storage = await strapi.service('api::storage.storage').get_storage_byID(assign_storage);
-            // console.log('storage',storage);
-            if(storage.private) {
-                const can_wtite_user = storage.can_wtite_user.length > 0 && storage.can_wtite_user.map(i => i.id);
-                auth = can_wtite_user.includes(user_id) || storage.creator.id === user_id
-            } else {
-                const belongedInfo = await strapi.service('api::storage.storage').find_belongedInfo_byStorageID(assign_storage);
-                if(belongedInfo){
-                    // console.log('belongedInfo',belongedInfo);
-                    if(belongedInfo.user_id === user_id){
-                        auth = true
-                    }
-                    if(belongedInfo.project){
-                        const members = belongedInfo.project?.project_members;
-                        const member_roles = belongedInfo.project?.member_roles;
-                        if(members.filter(i => i.by_user.id === user_id)?.length > 0){
-                            calc_auth(members,member_roles)
-                        }
-                    }
-                    if(belongedInfo.root_project){
-                        const members = belongedInfo.root_project?.project_members;
-                        const member_roles = belongedInfo.root_project?.member_roles;
-                        if(members.filter(i => i.by_user.id === user_id)?.length > 0){
-                            calc_auth(members,member_roles)
-                        }
-                    }
-                    if(belongedInfo.card){
-                        const members = belongedInfo.card.card_members;
-                        const member_roles = belongedInfo.card.member_roles;
-                        if(members.filter(i => i.by_user.id === user_id)?.length > 0){
-                            calc_auth(members,member_roles)
-                        }
-                    }
-                }
+            const storage_id = assign_storage
+            const checkAuth = 'write'
+            const selfAuth = await strapi.service('api::storage.storage').storageSelfAuth({storage_id,user_id,checkAuth});
+            auth = selfAuth.read
+            if(!auth){
+                const assign = 'storage'
+                const collections = await strapi.service('api::storage.storage').getCollections({
+                    assign,user_id,storage_id
+                })
+                auth = collections.filter(i => i.create)?.length > 0
             }
         }
         // console.log('auth',auth);
         
-        let params = {};
-        params.name = name;
-        params.type = type;
         if(auth) {
+            let params = {};
+            params.name = name;
+            params.type = type;
             params.color_marker = [];
             if(assign_storage) {
                 params.storage = {
@@ -323,7 +219,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                 } else {
                     params.azureInfo = azureInfo
                 }
-            }
+            };
             // console.log(params);
             let create_storage = await strapi.entityService.create('api::storage.storage',{
                 data: {
@@ -382,26 +278,45 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
 
             let __remove = {
                 storage_need_delete: [id],
-                file_need_delete: []
+                file_need_delete: [],
+                source_file_need_delete: [],
+                file_size_for_count: []
             }
+            let count = 0
             const process_ids_for_delete = async (id) => {
+                count++
                 const this_storage = await strapi.entityService.findOne('api::storage.storage', id, {
                     populate: {
                         sub_folders: {
                             fields: ['id']
                         },
                         storage_files: {
-                            fields: ['id']
+                            fields: ['id'],
+                            populate: {
+                                file: {
+                                    fields: ['id','size']
+                                }
+                            }
                         }
                     }
                 });
                 if (this_storage) {
                     // console.log('this_storage',this_storage);
                     if (this_storage.storage_files?.length > 0) {
+                        // console.log('this_storage',this_storage);
                         const files = this_storage.storage_files.map(i => i.id);
-                        // console.log('files',files);
                         __remove.file_need_delete.push(...files);
-                    } else if (this_storage.sub_folders?.length > 0) {
+                        // console.log('file_need_delete',__remove.file_need_delete);
+                        
+                        const files_sizes = this_storage.storage_files.map(i => i.file?.size);
+                        __remove.file_size_for_count.push(...files_sizes);
+                        // console.log('file_size_for_count',__remove.file_size_for_count);
+                        
+                        const source_files_ids = this_storage.storage_files.map(i => i.file?.id);
+                        __remove.source_file_need_delete.push(...source_files_ids);
+                        // console.log('source_file_need_delete',__remove.source_file_need_delete);
+                    }
+                    if (this_storage.sub_folders?.length > 0) {
                         const subfolders = this_storage.sub_folders.map(i => i.id);
                         __remove.storage_need_delete.push(...subfolders);
                         // console.log('subfolders',subfolders);
@@ -411,7 +326,6 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                             })
                         );
                     } 
-                    
                     // console.log('process_ids_for_delete',__remove);
                     return __remove;
                 }
@@ -422,47 +336,78 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                 
                 let storage_need_delete = res.storage_need_delete;
                 let file_need_delete = res.file_need_delete;
-
-                let done = [ false, false ]                
-                if(storage_need_delete.length > 0){
-                    // console.log('storage_need_delete',storage_need_delete);
-                    const results = await Promise.allSettled(
-                        storage_need_delete.map(async(i) => {
-                            await strapi.entityService.delete('api::storage.storage',i)
-                        })
-                    )
-                    if(results) {
-                        done[0] = true
-                    }
-                } else {
-                    done[0] = true
-                }
-                if(file_need_delete.length > 0){
-                    // console.log('file_need_delete',file_need_delete);
-                    const results = await Promise.allSettled(
-                        file_need_delete.map(async(i) => {
-                            await strapi.entityService.delete('api::storage-file.storage-file',i)
-                        })
-                    )
-                    if(results) {
-                        done[1] = true
-                    }
-                } else {
-                    done[1] = true
-                }
-                // console.log('done',done);
-                if(!done.includes(false)) {
-                    let response = {
-                        team_id: ctx.default_team?.id,
-                        data: {
-                            removed_storage_id: id
+                let total_remove_size = res.file_size_for_count.reduce((a, b) => a + b);
+                let source_file_need_delete = res.source_file_need_delete;
+                
+                process.nextTick(async () => {
+                    try {
+                        const belongedInfo = await strapi.service('api::storage-file.storage-file').find_belongedInfo_byFileID(file_need_delete[0]);
+                        if(belongedInfo){
+                            // console.log('process.nextTick belongedInfo');
+                            const project = belongedInfo.belonged_project
+                            if(project){
+                                const params = {
+                                      project: project,
+                                      size: 0,
+                                      prv_size: total_remove_size
+                                  }
+                                //   console.log('process.nextTick start', params);
+                              await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                              // 删除多个文件
+                              source_file_need_delete.map(async(i) => {
+                                  await strapi.plugins.upload.services.upload.remove({id: i});
+                              })
+                              
+                                // await strapi.plugins.upload.services.upload.removeFiles(source_file_need_delete);
+                                // await strapi.plugins.upload.services.upload.removeFiles(
+                                //   fileIds.source_file_need_delete(id => ({ id }))
+                                // );
+                            }
                         }
+        
+                        let done = [ false, false ]
+                        if(storage_need_delete.length > 0){
+                            // console.log('storage_need_delete',storage_need_delete);
+                            const results = await Promise.allSettled(
+                                storage_need_delete.map(async(i) => {
+                                    await strapi.entityService.delete('api::storage.storage',i)
+                                })
+                            )
+                            if(results) {
+                                done[0] = true
+                            }
+                        } else {
+                            done[0] = true
+                        }
+                        if(file_need_delete.length > 0){
+                            // console.log('file_need_delete',file_need_delete);
+                            const results = await Promise.allSettled(
+                                file_need_delete.map(async(i) => {
+                                    await strapi.entityService.delete('api::storage-file.storage-file',i)
+                                })
+                            )
+                            if(results) {
+                                done[1] = true
+                            }
+                        } else {
+                            done[1] = true
+                        }
+                        // console.log('done',done);
+                        if(done.includes(false)) {
+                            console.error(res, '批量删除出错')
+                        }
+                    } catch (error) {
+                      console.error('After update processing error:', error);
                     }
-                    strapi.$publish('storage:removed', [ctx.room_name], response);
-                    return 'OK'
-                } else {
-                    ctx.throw(401, '执行出错，请刷新页面后再尝试');
+                });
+                let response = {
+                    team_id: ctx.default_team?.id,
+                    data: {
+                        removed_storage_id: id
+                    }
                 }
+                strapi.$publish('storage:removed', [ctx.room_name], response);
+                return 'OK'
             }
         } else {
             return false

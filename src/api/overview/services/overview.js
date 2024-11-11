@@ -12,7 +12,7 @@ module.exports = createCoreService('api::overview.overview',({strapi}) => ({
         const overview = await strapi.entityService.findOne('api::overview.overview', id, {
             populate: {
                 media: {
-                    fields: ['id','ext','url']
+                    fields: ['id','ext','url','size']
                 },
                 project: {
                     populate: {
@@ -87,34 +87,130 @@ module.exports = createCoreService('api::overview.overview',({strapi}) => ({
     async calc_overview_auth(...args){
         const ctx = strapi.requestContext.get();
         const [ overview, user_id ] = args;
-
-        let members;
-        let member_roles;
-        const calc_auth = (members,member_roles) => {
-            // console.log('members',members,member_roles);
-            const {ACL, is_blocked} = strapi.service('api::project.project').calc_ACL(members,member_roles,user_id);
-            
-            if(is_blocked){
-                ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
+        
+        let permission
+        const setAuth = (roles) => {
+            const ACLs = roles?.map(i => i.ACL.find(j => j.collection === 'overview')).flat(2);
+            return {
+                read: ACLs?.filter(i => i.read)?.length > 0,
+                create: ACLs?.filter(i => i.create)?.length > 0,
+                modify: ACLs?.filter(i => i.modify)?.length > 0,
+                remove: ACLs?.filter(i => i.delete)?.length > 0,
+                fields_permission: [...new Set(ACLs?.map(i => i.fields_permission)?.flat(2)?.filter(j => j.modify)?.map(k => k.field))]
             }
-
-            const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'overview');
-            const fields_permission = strapi.service('api::project.project').clac_authed_fields(ACL,'overview');
-            // console.log('A',read, create, modify, remove);
-            return { read, create, modify, remove, fields_permission }
         }
-        if(overview.project?.project_members){
-            members = overview.project?.project_members
-            member_roles = overview.project?.member_roles;
+        if(overview.project){
+            const project_id = overview.project.id;
+            const roles = await strapi.db.query('api::member-role.member-role').findMany({
+                where: {
+                    by_project: project_id,
+                    members: {
+                        by_user: user_id
+                    }
+                },
+                populate: {
+                    ACL: {
+                        populate: {
+                            fields_permission: true
+                        }
+                    }
+                }
+            });
+            permission = setAuth(roles)
         }
-        if(overview.card?.card_members){
-            members = overview.card?.card_members
-            member_roles = overview.card?.member_roles;
+        if(overview.card){
+            const card_id = overview.card.id;
+            const roles = await strapi.db.query('api::member-role.member-role').findMany({
+                where: {
+                    by_card: card_id,
+                    members: {
+                        by_user: user_id
+                    }
+                },
+                populate: {
+                    ACL: {
+                        populate: {
+                            fields_permission: true
+                        }
+                    }
+                }
+            });
+            permission = setAuth(roles)
         }
-        const { read, create, modify, remove, fields_permission } = calc_auth(members,member_roles);
-        // console.log('B',read, create, modify, remove);
-        const calc_info = { read:read, create:create, modify:modify, remove:remove, fields_permission:fields_permission }
-        return calc_info
+        return permission
+    },
+    /**
+        @args card_id ||  overview || project_id
+        会一并删除OSS文件
+    */
+    async remove_overview(args){
+        const {card_id, overview, project_id} = args;
+        
+        const removeOverview = async (overview) => {
+            if(overview.media) {
+                process.nextTick(async () => {
+                    try {
+                        const params = {
+                              overview: overview,
+                              size: 0,
+                              prv_size: overview.media?.size || 0
+                          }
+                        //   console.log('process.nextTick start', params);
+                        await strapi.service('api::project.project').updateProjectTotalFileSize(params);
+                        if(overview.media?.url){
+                            const ali_params = {
+                              url: overview.media?.url,
+                              urls: null,
+                        }
+                        await strapi.service('api::ali.ali').removeObject(ali_params)
+                        }
+                    } catch (error) {
+                      console.error('After update processing error:', error);
+                    }
+                });
+            }
+            await strapi.entityService.delete('api::overview.overview', overview.id);
+        }
+        
+        if(overview){
+            await removeOverview(overview)
+        }
+        
+        if(card_id){
+            const overviews = await strapi.db.query('api::overview.overview').findMany({
+                where: {
+                    card: card_id,
+                },
+                populate: {
+                    media: {
+                        fields: ['id', 'url', 'size']
+                    }
+                }
+            });
+            if(overviews?.length > 0){
+                for(const overview in overviews){
+                    await removeOverview(overview)
+                }
+            }
+        }
+        
+        if(project_id){
+            const overviews = await strapi.db.query('api::overview.overview').findMany({
+                where: {
+                    project: project_id,
+                },
+                populate: {
+                    media: {
+                        fields: ['id', 'url', 'size']
+                    }
+                }
+            });
+            if(overviews?.length > 0){
+                for(const overview in overviews){
+                    await removeOverview(overview)
+                }
+            }
+        }
     },
     process_updateOverview_params(...args){
         const [ data, fields_permission ] = args;

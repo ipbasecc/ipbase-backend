@@ -1,0 +1,22 @@
+{
+  "kind": "singleType",
+  "collectionName": "systems",
+  "info": {
+    "singularName": "system",
+    "pluralName": "systems",
+    "displayName": "system",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user_level": {
+      "displayName": "user level",
+      "type": "component",
+      "repeatable": true,
+      "component": "system.user-level"
+    }
+  }
+}

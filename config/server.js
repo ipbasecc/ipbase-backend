@@ -7,5 +7,5 @@ module.exports = ({ env }) => ({
   webhooks: {
     populateRelations: env.bool('WEBHOOKS_POPULATE_RELATIONS', false),
   },
-  url: env('', 'https://api.yihu.team'),
+  url: env('HOST_URL', 'http://127.0.0.1:1337'),
 });

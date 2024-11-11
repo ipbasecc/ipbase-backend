@@ -35,11 +35,11 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                 }
             })
             if(storage){
-                if(storage.belonged_user?.id){
+                if(storage.belonged_user){
                     belongedInfo.user = storage.belonged_user.id;
                     return belongedInfo
                 }
-                if(storage.belonged_project?.id){
+                if(storage.belonged_project){
                     // console.log('storage.belonged_project service',storage.belonged_project?.id);
                     const project_id = storage.belonged_project.id;
                     const project = await strapi.service('api::project.project').find_projectByID(project_id)
@@ -49,7 +49,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                         return belongedInfo
                     }
                 }
-                if(storage.belonged_card?.id){
+                if(storage.belonged_card){
                     const card_id = storage.belonged_card.id;
                     const card = await strapi.service('api::card.card').find_cardByID(card_id)
                     if(card){
@@ -155,9 +155,58 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
             }
         }
     },
+    async storageSelfAuth(args){
+        const {storage_id, user_id, checkAuth} = args;
+        let can_read_user
+        let can_write_user
+        if(checkAuth === 'read'){
+            const can_read_user = await strapi.db.query('api::storage.storage').findOne({
+                where: {
+                    id: storage_id,
+                    can_read_user: user_id
+                }
+            })
+        }
+        if(checkAuth === 'write'){
+            const can_write_user = await strapi.db.query('api::storage.storage').findOne({
+                where: {
+                    id: storage_id,
+                    can_write_user: user_id
+                }
+            })
+        }
+        return {
+            read: !!can_read_user,
+            write: !!can_write_user,
+        }
+    },
+    async getCollections(args){
+        const {assign, user_id, project_id, card_id, storage_id} = args;
+        
+        if(assign === 'card'){
+            let collection = await strapi.service('api::storage.storage').collection_by_belonged_card(user_id,assign_card)
+            return [collection]
+        }
+        if(assign === 'project'){
+            return await strapi.service('api::storage.storage').collections_by_belonged_project(user_id,assign_project)
+        }
+        if(assign === 'storage'){
+            const storage = await strapi.service('api::storage.storage').get_storage_byID(storage_id);
+            // console.log('storage',storage);
+            const belongedInfo = await strapi.service('api::storage.storage').find_belongedInfo_byStorageID(storage_id);
+            if(belongedInfo){
+                if(belongedInfo.card){
+                    let collection = await strapi.service('api::storage.storage').collection_by_belonged_card(user_id,belongedInfo.card.id)
+                    return [collection]
+                }else if(belongedInfo.project){
+                    return await strapi.service('api::storage.storage').collections_by_belonged_project(user_id,belongedInfo.project.id)
+                }
+            }
+        }
+    },
     async get_storage_byID(...args){
         const [storage_id] = args;
-        const __storage = await strapi.entityService.findOne('api::storage.storage',storage_id,{
+        return await strapi.entityService.findOne('api::storage.storage',storage_id,{
             populate: {
                 creator: {
                     fields: ['id']
@@ -231,10 +280,6 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
                 }
             }
         })
-        if(__storage){
-            // console.log('__storage AAA',__storage);
-            return __storage
-        }
     },
     async get_AzBlobInfo(azureInfo){
         const { accountName, accountKey, EndpointSuffix, containerName, directoryName, endSlash  } = azureInfo;
@@ -784,6 +829,69 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         } catch (error) {
             return 0;
         }
-    }
+    },
+    async MediaLibraryService(...args) {
+        const [props] = args;
+        const { action, data } = props;
+        
+        const ctx = strapi.requestContext.get();
+        if(action === 'create_folder'){
+            try {
+              const { name, parent = null } = data;
+        
+              // 使用 strapi 的上传插件服务创建文件夹
+              const folder = await strapi.plugins.upload.services.folder.create({
+                name,
+                parent
+              });
+        
+              return {
+                data: folder,
+                message: 'Folder created successfully'
+              };
+            } catch (err) {
+              return ctx.badRequest('Failed to create folder', { error: err.message });
+            }
+        }
+    },
+    
+    async collection_by_belonged_card(...args){
+        const [user_id, card_id] = args;
+        const role = await strapi.db.query('api::member-role.member-role').findOne({
+            where: {
+                members: {
+                    by_user: user_id
+                },
+                by_card: card_id
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        return role.ACL.find(i => i.collection === 'storage');
+    },
+    async collections_by_belonged_project(...args){
+        const [user_id, project_id] = args;
+        const roles = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                members: {
+                    by_user: user_id
+                },
+                by_project: project_id
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        return roles?.map(role => role.ACL.find(i => i.collection === 'storage'));
+    },
 
 }));

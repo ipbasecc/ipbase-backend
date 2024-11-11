@@ -187,9 +187,6 @@
       "target": "api::card.card",
       "mappedBy": "followed_bies"
     },
-    "mm_projectChatService_team": {
-      "type": "json"
-    },
     "created_projects": {
       "type": "relation",
       "relation": "oneToMany",
@@ -255,9 +252,6 @@
       "relation": "manyToMany",
       "target": "api::project.project",
       "mappedBy": "members"
-    },
-    "mm_user_id": {
-      "type": "uid"
     },
     "executor_todo": {
       "type": "relation",
@@ -354,6 +348,18 @@
       "relation": "oneToMany",
       "target": "api::notebook.notebook",
       "mappedBy": "user"
+    },
+    "order": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::order.order",
+      "mappedBy": "buyer"
+    },
+    "card": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::card.card",
+      "mappedBy": "employee"
     }
   }
 }

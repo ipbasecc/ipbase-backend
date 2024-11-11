@@ -11,7 +11,8 @@ module.exports = createCoreService('api::column.column', ({strapi}) => ({
         const [column_id] = args;
         let belongedInfo = {
             belonged_project: void 0,
-            belonged_card: void 0
+            belonged_card: void 0,
+            kanban: void 0
         }
 
         const find_belongedInfo_byColumnID_fn = async (id) => {
@@ -45,6 +46,9 @@ module.exports = createCoreService('api::column.column', ({strapi}) => ({
                     }
                 }
             });
+            if(column?.kanban){
+                belongedInfo.kanban = column.kanban
+            }
             if(column?.kanban?.group?.board?.project){
                 const project_id = column.kanban.group?.board?.project?.id;
                 const project = await strapi.service('api::project.project').find_projectByID(project_id);

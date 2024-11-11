@@ -12,6 +12,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
 
         let belonged_card;
         let project;
+        let kanban_type
         const find_belongedInfo_byKanbanID_fn = async (id) => {
             let kanban = await strapi.entityService.findOne('api::kanban.kanban',id,{
                 populate: {
@@ -42,6 +43,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                     }
                 }
             });
+            kanban_type = kanban.type
             
             if(kanban?.relate_by_card) {
                 if(!belonged_card){
@@ -67,6 +69,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
             if(belonged_card){
                 belongedInfo.belonged_card = belonged_card
             }
+            belongedInfo.kanban_type = kanban_type
             return belongedInfo
         }
     },
@@ -109,10 +112,51 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
 
         return params
     },
-    column_populate(){
+    column_populate(kanban_type){
+        if(kanban_type === 'classroom'){
+            return {
+                cards: {
+                    populate: {
+                        overviews: {
+                            populate: {
+                                media: {
+                                    fields: ['id', 'ext','url']
+                                }
+                            }
+                        },
+                        storage: {
+                            populate: {
+                                files: {
+                                    fields: ['id','name','ext','url']
+                                },
+                                sub_folders: true,
+                            }
+                        },
+                        cover: {
+                            fields: ['id', 'ext', 'url']
+                        },
+                        creator: {
+                            fields: ['id', 'username'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            fields: ['id', 'ext', 'url']
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+        }
         return {
             cards: {
                 populate: {
+                    cover: {
+                        fields: ['id', 'ext', 'url']
+                    },
                     followed_bies: {
                         fields: ['id','username'],
                         populate: {
@@ -259,8 +303,8 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
         }
     },
     async get_kanbanSourceData_byID(...args){
-        const[ kanban_id ] = args;
-        const column_populate = strapi.service('api::kanban.kanban').column_populate();
+        const[ kanban_id, kanban_type, user_id ] = args;
+        let column_populate = strapi.service('api::kanban.kanban').column_populate(kanban_type);
         let kanban = await strapi.entityService.findOne('api::kanban.kanban',kanban_id,{
             populate: {
                 columns: {
@@ -268,8 +312,9 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 }
             }
         })
+        // console.log('kanban :', kanban.columns?.map(i => i.cards).flat(2)?.length)
         if(kanban){
-            async function processKanban(_kanban) {
+            async function sync_mps(_kanban) {
                 _kanban.columns = await Promise.all(_kanban.columns.map(async (column) => {
                   const updatedCards = await Promise.all(column.cards.map(async (card) => {
                     const updatedOverviews = card.overviews?.length > 0
@@ -285,9 +330,108 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                     cards: updatedCards
                   };
                 }));
-                return kanban;
+                return _kanban;
             }
-            kanban = await processKanban(kanban)
+            kanban = await sync_mps(kanban)
+            let authMap = [];
+            let paiedMap = [];
+            const validate = async (card) => {
+                let auth = false
+                if(!card.price || card.price <= 0 && card.published && !card.pulled) {
+                    auth = true
+                } // 免费的 且 已发布
+                // console.log('validate 1', card.id, auth)
+                if(!auth){
+                    const isCreator = async () => {
+                        if(card.creator?.id === user_id) {
+                            auth = true
+                        } else {
+                            const creator = await strapi.db.query('api::member-role.member-role').findOne({
+                                where: {
+                                    members: {
+                                        by_user: user_id
+                                    },
+                                    by_card: card.id,
+                                    subject: 'creator'
+                                }
+                            })
+                            auth = !!creator
+                        }
+                    }
+                    await isCreator();
+                    // console.log('validate 2', card.id, auth)
+                }
+                if(!auth){
+                    // 购买过或者是card的创建者
+                    const order = await strapi.db.query('api::order.order').findOne({
+                        where: {
+                            card: card.id, // 确保关联的card是给定的card.id
+                            buyer: user_id,
+                            orderState: 2
+                        },
+                        populate: {
+                            buyer: {
+                                fields: ['id']
+                            },
+                            card: {
+                                fields: ['id']
+                            }
+                        }
+                    });
+                    if(order?.buyer?.id === user_id && order?.card?.id){
+                        paiedMap.push(order.card?.id)
+                    }
+                    auth = !!order
+                }
+                // console.log('validate 3', card.id, auth)
+                // console.log(order)
+                return auth
+            }
+            const process_payment = async (_kanban) => {
+                _kanban.columns = await Promise.all(_kanban.columns.map(async (column) => {
+                  const updatedCards = await Promise.all(column.cards.map(async (card) => {
+                    const auth = await validate(card);
+                    // 验证不通过的，删除详情数据
+                    // console.log('auth', auth)
+                    if(!auth){
+                        delete card.overviews
+                        delete card.storage
+                    }
+                    authMap.push({
+                        id: card.id,
+                        detailAuth: auth
+                    });
+                    return card
+                  }));
+                //   console.log(authMap)
+                  function filterCards(cards) {
+                      const filteredCards = [];
+                      for (const card of cards) {
+                        // (没有下架 || 已经购买) && ( 已发布 || 经过验证可以被查看内容的：是作者 / 买过 )
+                        const hasDetialAuthMap = authMap.filter(i => i.detailAuth)?.map(j => j.id)
+                        const canShow = (_card) => {
+                            return hasDetialAuthMap.includes(_card.id)
+                        }
+                        // console.log('canShow',card.id, canShow(card))
+                        if (canShow(card)) {
+                          filteredCards.push(card);
+                        }
+                      }
+                      return filteredCards;
+                    }
+                    
+                //   const filteredCards = updatedCards;
+                  const filteredCards = await filterCards(updatedCards);
+                  return {
+                    ...column,
+                    cards: filteredCards
+                  };
+                }));
+                return _kanban;
+            }
+            if(kanban_type === 'classroom'){
+                kanban = process_payment(kanban)
+            }
             return kanban
         }
     },

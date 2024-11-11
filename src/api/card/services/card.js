@@ -9,12 +9,16 @@ const { createCoreService } = require('@strapi/strapi').factories;
 
 module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     async initRole(...args) {
-      const [user_id,member_byCurUser] = args;
+      const [user_id,member_byCurUser,card_type] = args;
       const { roleBase } = require('./roleBase.js');
 
       try {
-        const role_base = await roleBase();
+        let role_base = roleBase();
+        if(card_type === 'classroom'){
+            role_base = role_base.filter(i => i.role === 'creator')
+        }
 
+        // console.log('role_base ready', role_base);
         const roleBaseResults = await Promise.allSettled(role_base?.map(async (i) => {
           const res = await strapi.entityService.create('api::member-role.member-role', {
             data: {
@@ -24,17 +28,16 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
           });
           return res;
         }));
+        
+        // console.log('roleBaseResults ready');
+        const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled')?.map(i => i.value);
+        const role_creator = successfulResults.find((result) => result.subject === 'creator');
 
-        const successfulResults = roleBaseResults.filter((result) => result.status === 'fulfilled');
-        const role_creator = successfulResults.find((result) => result.value.subject === 'creator');
-
-        // console.log('successfulResults',successfulResults);
+        // console.log('role_creator',role_creator);
         if (role_creator) {
-          const creator = await strapi.entityService.update('api::member-role.member-role', role_creator.value?.id,{
+          const creator = await strapi.entityService.update('api::member-role.member-role', role_creator.id,{
             data: {
-                members: {
-                    set: [member_byCurUser.id],
-                }
+                members: member_byCurUser.id
             }
           });
         //   console.log(creator);
@@ -55,7 +58,8 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
 
         let belongedInfo = {
             belonged_project: undefined,
-            belonged_card: undefined
+            belonged_card: undefined,
+            belonged_column: undefined,
         }
 
         const find_belongedInfo_byCardID_fn = async (id) => {
@@ -84,6 +88,9 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                                         }
                                     }
                                 }
+                            },
+                            cards: {
+                                fields: ['id']
                             }
                         }
                     },
@@ -97,6 +104,9 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 }
             });
             // console.log('belongedInfo card',card);
+            if(card?.column && !belongedInfo.belonged_column){
+                belongedInfo.belonged_column = card?.column
+            }
 
             if(card?.column?.kanban?.group?.board?.project){
                 const project_id = card?.column?.kanban.group?.board?.project?.id;
@@ -118,6 +128,29 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         await find_belongedInfo_byCardID_fn(card_id);
         // console.log('belongedInfo project',belongedInfo);
         return belongedInfo
+    },
+    async isSubCard (...args) {
+        const [card_id] = args;
+        const card = await strapi.entityService.findOne('api::card.card', card_id, {
+            populate: {
+                column: {
+                    populate: {
+                        kanban: {
+                            populate: {
+                                card: {
+                                    fields: ['id']
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        if(card?.column?.kanban?.card){
+            return true
+        } else {
+            return false
+        }
     },
     async sync_mpsInfo(...args) {
       const [overviews] = args;
@@ -150,12 +183,69 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     },
     async find_cardByID(...args) {
         const ctx = strapi.requestContext.get();
-        const [card_id] = args;
-        let card = await strapi.entityService.findOne('api::card.card',card_id,{
-            populate: {
-                creator: {
-                    fields: ['id']
-                },
+        const [card_id, props] = args;
+        let populate = {
+            cover: {
+                fields: ['id', 'ext', 'url']
+            },
+            overviews: {
+                populate: {
+                    media: {
+                        fields: ['id', 'ext','url']
+                    },
+                    marker_todos: {
+                        populate: {
+                            attachment: {
+                                fields: ['id', 'ext','url']
+                            }
+                        }
+                    }
+                }
+            },
+            storage: {
+                populate: {
+                    files: {
+                        fields: ['id','name','ext','url']
+                    },
+                    sub_folders: true,
+                    creator: {
+                        fields: ['id','username'],
+                        populate: {
+                            profile: {
+                                fields: ['title'],
+                                populate: {
+                                    avatar: {
+                                        fields: ['ext','url']
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            card_documents: {
+                populate: {
+                    creator: {
+                        fields: ['id','username'],
+                        populate: {
+                            profile: {
+                                populate: {
+                                    avatar: {
+                                        fields: ['id','ext','url']
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            creator: {
+                fields: ['id']
+            }
+        }
+        if(props !== 'classroom'){
+            populate = {
+                ...populate,
                 share_codes: {
                     populate: {
                         creator: {
@@ -195,90 +285,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         }
                     }
                 },
-                overviews: {
-                    populate: {
-                        media: {
-                            fields: ['id', 'ext','url']
-                        },
-                        marker_todos: {
-                            populate: {
-                                attachment: {
-                                    fields: ['id', 'ext','url']
-                                }
-                            }
-                        }
-                    }
-                },
                 card_kanban: true,
-                storage: {
-                    populate: {
-                        files: {
-                            fields: ['id','name','ext','url']
-                        },
-                        sub_folders: true,
-                        card_members: {
-                            populate: {
-                              by_user: {
-                                fields: ['id']
-                              },
-                              member_roles: {
-                                  fields: ['id']
-                              }
-                            }
-                          },
-                          member_roles: {
-                              populate: {
-                                  ACL: {
-                                      populate: {
-                                          fields_permission: true
-                                      }
-                                  }
-                              }
-                          },
-                        owner: {
-                            fields: ['id','username'],
-                            populate: {
-                                profile: {
-                                    fields: ['title'],
-                                    populate: {
-                                        avatar: {
-                                            fields: ['ext','url']
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        creator: {
-                            fields: ['id','username'],
-                            populate: {
-                                profile: {
-                                    fields: ['title'],
-                                    populate: {
-                                        avatar: {
-                                            fields: ['ext','url']
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                card_documents: {
-                    populate: {
-                        creator: {
-                            fields: ['id','username'],
-                            populate: {
-                                profile: {
-                                    populate: {
-                                        avatar: {
-                                            fields: ['id','ext','url']
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
                 todogroups: {
                     populate: {
                         todos: true
@@ -356,7 +363,14 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         }
                     }
                 },
+                card_kanban: true
             }
+        } else {
+            delete populate.storage.populate.creator
+            delete populate.overviews.marker_todos
+        }
+        let card = await strapi.entityService.findOne('api::card.card',card_id,{
+            populate: populate
         })
         if(card) {
             if(card.overviews?.length > 0){
@@ -384,50 +398,86 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         return card
     },
     async clac_card_auth(...args){
-        const [ card, user_id ] = args;
+        const [ card_id, user_id, collection ] = args;
         const ctx = strapi.requestContext.get();
-        // console.log('clac_card_auth card', card, user_id)
-        const members = card.card_members;
-        const member_roles = card.member_roles;
+        
+        let ACL
+        let is_blocked
+        let role_names
+        const card_role = await strapi.db.query('api::member-role.member-role').findOne({
+            where: {
+                by_card: card_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        // console.log('card_role', card_role)
+        if(card_role){
+            ACL = card_role.ACL
+            is_blocked = card_role.subject === 'blocked'
+            role_names = [card_role.subject]
+        } else {
+            ctx.throw(403, '没有找到对应的用户角色')
+        }
 
-        const {ACL, is_blocked, role_names} = strapi.service('api::project.project').calc_ACL(members, member_roles, user_id);
-        const { read, create, modify, remove } = strapi.service('api::project.project').calc_collection_auth(ACL,'card');
-        // console.log('clac_card_auth ACL', ACL)
-        const authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'card');
+        const { read, create, modify, remove } = {
+            read: ACL.find(i => i.collection === collection)?.read,
+            create: ACL.find(i => i.collection === collection)?.create,
+            modify: ACL.find(i => i.collection === collection)?.modify,
+            remove: ACL.find(i => i.collection === collection)?.delete,
+        };
+        
+        // console.log('ACL', read, create, modify, remove)
+        const authed_fields = [...new Set(ACL.map(i => i.fields_permission).flat(2)?.filter(j => j.modify)?.map(k => k.field))];
         return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
     },
     async clac_finalAuth_byCardID(...args){
-        const [ card_id, user_id ] = args;
-        const card = await strapi.service('api::card.card').find_cardByID(card_id);
-        if(card){
-            const cardUsers = card.card_members.map((i) => i.by_user.id);
-            const isCardMember = cardUsers.includes(user_id);
-            // console.log('isCardMember 1', isCardMember)
-            if(isCardMember){
-                const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(card, user_id);
-                return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
-            } else {
-                const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
-                // console.log('belongedInfo', belongedInfo);
-                let _isCardMember
-                if(belongedInfo?.belonged_card){
-                    const _card = belongedInfo.belonged_card
-                    const _cardUsers = _card.card_members.map((i) => i.by_user.id);
-                    _isCardMember = _cardUsers.includes(user_id);
-                    if(_isCardMember){
-                        // console.log('isCardMember 3', _isCardMember)
-                        const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(_card, user_id);
-                        return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
+        const [ card_id, user_id, collection ] = args;
+        const matchCardMember = async(user_id, card_id) => {
+            const matchMemberByUserID = await strapi.db.query('api::member-role.member-role').findMany({
+                where: {
+                    by_card: card_id,
+                    members: {
+                        by_user: user_id
                     }
-                };
-                // console.log('belonged_project 3', belongedInfo.belonged_project);
-                if(!_isCardMember && belongedInfo?.belonged_project){
-                    // console.log('belonged_project 3')
-                    const _project = belongedInfo.belonged_project;
-                    const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } =
-                        strapi.service('api::project.project').clac_projectCard_auth(_project,user_id);
+                }
+            })
+            return !!matchMemberByUserID
+        }
+        const isCardMember = await matchCardMember(user_id, card_id)
+        // console.log('isCardMember 1', isCardMember)
+        if(isCardMember){
+            const collection = 'card'
+            const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(card_id, user_id,collection);
+            return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
+        } else {
+            const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
+            // console.log('belongedInfo', belongedInfo);
+            let _isCardMember
+            if(belongedInfo?.belonged_card){
+                const _card_id = belongedInfo.belonged_card.id
+                _isCardMember = await matchCardMember(user_id, _card_id)
+                if(_isCardMember){
+                    // console.log('isCardMember 3', _isCardMember)
+                    const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(_card_id, user_id,collection);
                     return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
                 }
+            };
+            // console.log('belonged_project 3', belongedInfo.belonged_project);
+            if(!_isCardMember && belongedInfo?.belonged_project){
+                // console.log('belonged_project 3')
+                const _project = belongedInfo.belonged_project;
+                const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } =
+                    strapi.service('api::project.project').clac_projectCard_auth(_project.id,user_id,collection);
+                return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
             }
         }
     },
@@ -437,6 +487,14 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         const [user_id,card,data,fields_permission,props] = args;
         const { orderTodogroup, orderTodo } = props;
         let params = {};
+        const isCreate = await strapi.db.query('api::member-role.member-role').findOne({
+            where: {
+                subject: 'creator',
+                members: {
+                    by_user: user_id
+                }
+            }
+        })
 
         if(!data.role && ((data.new_follow_user_id && data.new_follow_user_id != user_id ) || (data.remove_follow_user_id && data.remove_follow_user_id != user_id))) {
             ctx.throw(401, '执行关注操作的用户ID与操作者不匹配')
@@ -454,12 +512,6 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
             params.followed_bies = {
                 disconnect: [Number(data.data?.remove_follow_user_id)]
             }
-        } else if (data.data?.remove_follow_user_id && fields_permission.includes('followed_bies')) {
-            params.followed_bies = {
-                disconnect: [Number(data.data?.remove_follow_user_id)]
-            }
-        } else if(data.data?.remove_follow_user_id && Number(data.data?.remove_follow_user_id) != user_id && !fields_permission.includes('followed_bies')) {
-            ctx.throw(401,'您没有修改卡片关注者的权限')
         }
 
         if(data.data?.new_storageFiles && fields_permission.includes('storage')) {
@@ -515,12 +567,17 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         if(data.data?.name && fields_permission.includes('name')) {
             params.name = data.data?.name
         } else if (data.data?.name && !fields_permission.includes('name')) {
-            ctx.throw(401, '您无权修改卡片名称')
+            ctx.throw(401, '您无权修改名称')
+        }
+        if(data.data?.description && fields_permission.includes('description')) {
+            params.description = data.data?.description
+        } else if (data.data?.description && !fields_permission.includes('description')) {
+            ctx.throw(401, '您无权修改摘要')
         }
         if(data.data?.type && fields_permission.includes('type')) {
             params.type = data.data?.type
         } else if (data.data?.type && !fields_permission.includes('type')) {
-            ctx.throw(401, '您无权修改卡片类型')
+            ctx.throw(401, '您无权修改类型')
         }
         if(data.data?.status && fields_permission.includes('status')) {
             params.status = data.data?.status
@@ -693,78 +750,77 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         } else if (data.data?.share_code && !fields_permission.includes('share')) {
             ctx.throw(401, '您无权共享卡片')
         }
+        if(data.data?.price && isCreate){
+            params.price = data.data?.price
+        } else if(data.data?.price && !isCreate){
+            ctx.throw(401, '您无权修改售价')
+        }
+        if(data.data?.published && isCreate){
+            params.published = true
+        }
 
         return params
     },
     async initFullCard(...args){
-        const [card] = args;
-        if(card && !card.card_kanban) {
-            var now = new Date();
-            var iso = now.toISOString();
-            const new_kanban = await strapi.entityService.create('api::kanban.kanban',{
-                data: {
-                    title: `${card.name} 的任务看板`,
-                    type: 'kanban',
-                    status: 'pending',
-                    publishedAt: iso,
-                    relate_by_card: card.id
+        let [card] = args;
+        const initKanbanCard = async () => {
+            if(card && !card.card_kanban) {
+                var now = new Date();
+                var iso = now.toISOString();
+                const new_kanban = await strapi.entityService.create('api::kanban.kanban',{
+                    data: {
+                        title: `${card.name} 的任务看板`,
+                        type: 'kanban',
+                        status: 'pending',
+                        publishedAt: iso,
+                        relate_by_card: card.id
+                    }
+                })
+                if(new_kanban) {
+                    card.card_kanban = new_kanban;
                 }
-            })
-            if(new_kanban) {
-                card.card_kanban = new_kanban;
+            }
+            if(card && !card.schedule) {
+                var now = new Date();
+                var iso = now.toISOString();
+                const new_schedule = await strapi.entityService.create('api::schedule.schedule',{
+                    data: {
+                        by_card: {
+                            set: [card.id]
+                        },
+                        publishedAt: iso
+                    }
+                })
+                if(new_schedule) {
+                    card.schedule = new_schedule;
+                }
             }
         }
-        if(card && !card.schedule) {
-            var now = new Date();
-            var iso = now.toISOString();
-            const new_schedule = await strapi.entityService.create('api::schedule.schedule',{
-                data: {
-                    by_card: {
-                        set: [card.id]
-                    },
-                    publishedAt: iso
-                }
-            })
-            if(new_schedule) {
-                card.schedule = new_schedule;
-            }
+        const typesForKanban = ['task', 'note', 'todo']
+        if(typesForKanban.includes(card.type)){
+            initKanbanCard();
         }
         if(card) {
             return card
         }
     },
-    card_populate_template() {
+    card_populate_template(...args) {
+        const [card_type] = args
         let populate = {
             creator: {
-                fields: ['id']
-            },
-            share_codes: {
-                populate: {
-                    creator: {
-                        fields: ['id','username'],
-                    }
-                }
-            },
-            followed_bies: {
-                fields: ['id','mm_profile'],
+                fields: ['id', 'username'],
                 populate: {
                     profile: {
                         populate: {
                             avatar: {
-                                fields: ['id', 'ext','url']
-                            },
-                            brand: {
-                                fields: ['id', 'ext','url']
-                            },
-                            cover: {
-                                fields: ['id', 'ext','url']
-                            },
+                                fields: ['id', 'ext', 'url']
+                            }
                         }
-                    },
-                    user_channel: {
-                        fields: ['id']
                     }
                 }
+            },
+            cover: {
+                fields: ['id','ext','url']
             },
             overviews: {
                 populate: {
@@ -780,78 +836,15 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                     }
                 }
             },
-            card_kanban: {
+            card_documents: {
                 populate: {
-                    columns: {
+                    author: {
+                        fields: ['id','username'],
                         populate: {
-                            cards: {
+                            profile: {
                                 populate: {
-                                    share_codes: {
-                                        populate: {
-                                            creator: {
-                                                fields: ['id','username'],
-                                            }
-                                        }
-                                    },
-                                    followed_bies: {
-                                        fields: ['id','username'],
-                                        populate: {
-                                            profile: {
-                                                fields: ['title'],
-                                                populate: {
-                                                    avatar: {
-                                                        fields: ['ext','url']
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    card_members: {
-                                        populate: {
-                                          by_user: {
-                                            fields: ['id']
-                                          },
-                                          member_roles: {
-                                              fields: ['id']
-                                          }
-                                        }
-                                      },
-                                      member_roles: {
-                                          populate: {
-                                              ACL: {
-                                                  populate: {
-                                                      fields_permission: true
-                                                  }
-                                              }
-                                          }
-                                      },
-                                    overview: {
-                                        populate: {
-                                            media: {
-                                                fields: ['ext','url']
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            executor: {
-                                fields: ['id','mm_profile'],
-                                populate: {
-                                    profile: {
-                                        populate: {
-                                            avatar: {
-                                                fields: ['ext','url']
-                                            },
-                                            brand: {
-                                                fields: ['ext','url']
-                                            },
-                                            cover: {
-                                                fields: ['ext','url']
-                                            },
-                                        }
-                                    },
-                                    user_channel: {
-                                        fields: ['id']
+                                    avatar: {
+                                        fields: ['id','ext','url']
                                     }
                                 }
                             }
@@ -912,58 +905,154 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                     }
                 }
             },
-            card_documents: {
-                populate: {
-                    author: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','ext','url']
+        }
+        if(card_type !== 'classroom'){
+            populate = {
+                ...populate,
+                share_codes: {
+                    populate: {
+                        creator: {
+                            fields: ['id','username'],
+                        }
+                    }
+                },
+                followed_bies: {
+                    fields: ['id','mm_profile'],
+                    populate: {
+                        profile: {
+                            populate: {
+                                avatar: {
+                                    fields: ['id', 'ext','url']
+                                },
+                                brand: {
+                                    fields: ['id', 'ext','url']
+                                },
+                                cover: {
+                                    fields: ['id', 'ext','url']
+                                },
+                            }
+                        },
+                        user_channel: {
+                            fields: ['id']
+                        }
+                    }
+                },
+                card_kanban: {
+                    populate: {
+                        columns: {
+                            populate: {
+                                cards: {
+                                    populate: {
+                                        share_codes: {
+                                            populate: {
+                                                creator: {
+                                                    fields: ['id','username'],
+                                                }
+                                            }
+                                        },
+                                        followed_bies: {
+                                            fields: ['id','username'],
+                                            populate: {
+                                                profile: {
+                                                    fields: ['title'],
+                                                    populate: {
+                                                        avatar: {
+                                                            fields: ['ext','url']
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        card_members: {
+                                            populate: {
+                                              by_user: {
+                                                fields: ['id']
+                                              },
+                                              member_roles: {
+                                                  fields: ['id']
+                                              }
+                                            }
+                                          },
+                                          member_roles: {
+                                              populate: {
+                                                  ACL: {
+                                                      populate: {
+                                                          fields_permission: true
+                                                      }
+                                                  }
+                                              }
+                                          },
+                                        overview: {
+                                            populate: {
+                                                media: {
+                                                    fields: ['ext','url']
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                executor: {
+                                    fields: ['id','mm_profile'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    fields: ['ext','url']
+                                                },
+                                                brand: {
+                                                    fields: ['ext','url']
+                                                },
+                                                cover: {
+                                                    fields: ['ext','url']
+                                                },
+                                            }
+                                        },
+                                        user_channel: {
+                                            fields: ['id']
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            },
-            todogroups: {
-                populate: {
-                    todos: true
-                }
-            },
-            feedback: {
-                populate: {
-                    todos: true
-                }
-            },
-            schedule: {
-                populate: {
-                    schedule_events: {
-                        populate: {
-                            creator: {
-                                fields: ['id','username'],
-                                populate: {
-                                    profile: {
-                                        populate: {
-                                            avatar: {
-                                                fields: ['id','url','ext']
+                },
+                todogroups: {
+                    populate: {
+                        todos: true
+                    }
+                },
+                feedback: {
+                    populate: {
+                        todos: true
+                    }
+                },
+                schedule: {
+                    populate: {
+                        schedule_events: {
+                            populate: {
+                                creator: {
+                                    fields: ['id','username'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    fields: ['id','url','ext']
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            },
-                            executor: {
-                                fields: ['id','color_marker','description','nickname','position','is_blocked','private_email'],
-                                populate: {
-                                    by_user: {
-                                        fields: ['id','username'],
-                                        populate: {
-                                            profile: {
-                                                populate: {
-                                                    avatar: {
-                                                        fields: ['id','url','ext']
+                                },
+                                executor: {
+                                    fields: ['id','color_marker','description','nickname','position','is_blocked','private_email'],
+                                    populate: {
+                                        by_user: {
+                                            fields: ['id','username'],
+                                            populate: {
+                                                profile: {
+                                                    populate: {
+                                                        avatar: {
+                                                            fields: ['id','url','ext']
+                                                        }
                                                     }
                                                 }
                                             }
@@ -971,45 +1060,45 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                                     }
                                 }
                             }
-                        }
-                    },
-                    share_codes: {
-                        populate: {
-                            creator: {
-                                fields: ['id','username'],
-                            }
-                        }
-                    }
-                }
-            },
-            card_members: {
-                populate: {
-                    by_user: {
-                        fields: ['id','username','mm_profile'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','url','ext']
-                                    }
+                        },
+                        share_codes: {
+                            populate: {
+                                creator: {
+                                    fields: ['id','username'],
                                 }
                             }
                         }
-                    },
-                    member_roles: {
-                        fields: ['id','subject']
                     }
-                }
-            },
-            member_roles: {
-                populate: {
-                    ACL: {
-                        populate: {
-                            fields_permission: true
+                },
+                card_members: {
+                    populate: {
+                        by_user: {
+                            fields: ['id','username','mm_profile'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            fields: ['id','url','ext']
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        member_roles: {
+                            fields: ['id','subject']
                         }
                     }
-                }
-            },
+                },
+                member_roles: {
+                    populate: {
+                        ACL: {
+                            populate: {
+                                fields_permission: true
+                            }
+                        }
+                    }
+                },
+            }
         }
         return populate
     },
@@ -1049,6 +1138,53 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         if(_redisCache){
             strapi.plugins["rest-cache"].services.cacheStore.clearByRegexp(_redisCache);
         }
+    },
+    async isCreator(...args) {
+        const [card_id,user_id] = args;
+        const matchedCard = await strapi.db.query('api::card.card').findOne({
+            where: {
+                id: card_id,
+                $or: [
+                    {
+                        creator: user_id
+                    },
+                    {
+                        member_roles: {
+                            subject: 'creator',
+                            members: {
+                                by_user: user_id
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+        return !!matchedCard;
+    },
+    async checkRemoveLock(args){
+        const {card_id} = args;
+        const locker = await strapi.db.query('api::order.order').findOne({
+            where: {
+                card: card_id,
+                orderState: 2
+            }
+        })
+        return {
+            locked: !!locker,
+            message: '已售出的内容不能被删除,'
+        }
+    },
+    async recursiveDeleteCard(args) {
+        const {card_id} = args;
+        
+        let card_kanbans = [];
+        let card_documents = [];
+        let card_overviews = [];
+        let card_todogroups = [];
+        let card_storage;
+        let card_schedule;
+        let card_member_roles = [];
+        let card_feedback
     }
   })
 );

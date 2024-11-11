@@ -25,9 +25,25 @@ module.exports = (config, { strapi }) => {
                           default_team: true
                       }
                   });
-                  if(user.default_team?.id){
-                      ctx.default_team = user.default_team
-                      ctx.room_name = `team_room_${user.default_team?.id}`;
+                  if(user){
+                      if(user?.blocked){
+                          ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                      }
+                      if(user.default_team?.id){
+                          ctx.default_team = user.default_team
+                          ctx.room_name = `team_room_${user.default_team?.id}`;
+                          let roles = await strapi.db.query('api::member-role.member-role').findMany({
+                              where: {
+                                  by_team: user.default_team.id,
+                                  members: {
+                                      by_user: user.id
+                                  }
+                              }
+                          })
+                          user.roles = roles?.length > 0 ? [...new Set(roles.map(i => i.subject))] : []
+                      }
+                      ctx.user = user
+                    //   console.log('ctx.user:', ctx.user);
                   }
               }
             } catch (err) {
