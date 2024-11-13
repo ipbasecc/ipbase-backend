@@ -105,7 +105,7 @@ module.exports = createCoreService('api::storage-file.storage-file',({strapi}) =
         const [file_id] = args;
         let file = await strapi.entityService.findOne('api::storage-file.storage-file',file_id,{
             populate: {
-                owner: {
+                creator: {
                     fields: ['id','username'],
                     populate: {
                         profile: {

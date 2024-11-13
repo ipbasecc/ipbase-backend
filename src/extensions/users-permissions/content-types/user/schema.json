@@ -223,12 +223,6 @@
       "target": "api::card.card",
       "mappedBy": "creator"
     },
-    "storage_files": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::storage-file.storage-file",
-      "mappedBy": "owner"
-    },
     "created_storages": {
       "type": "relation",
       "relation": "oneToMany",
@@ -360,6 +354,30 @@
       "relation": "oneToOne",
       "target": "api::card.card",
       "mappedBy": "employee"
+    },
+    "level_expiry_time": {
+      "type": "datetime"
+    },
+    "user_level": {
+      "type": "enumeration",
+      "enum": [
+        "Regular",
+        "Professional",
+        "Enterprise"
+      ],
+      "default": "Regular"
+    },
+    "overview": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::overview.overview",
+      "mappedBy": "creator"
+    },
+    "storage_files": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::storage-file.storage-file",
+      "mappedBy": "creator"
     }
   }
 }

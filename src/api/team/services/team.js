@@ -334,13 +334,9 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
     // 根据用户权限，对返回的数据执行过滤
     async filterByAuth(...args) {
         let [ team, user_id ] = args;
-        const curUserMember = team.member_roles?.map(i => i.members).flat(2)
+        const curUserMember = team.members?.find(i => i.by_user?.id === user_id);
         const getChannelAuth = async (channel_id) => {
             return await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
-        }
-        const getProjectAuth = async (project_id) => {
-            const project = await strapi.service('api::project.project').find_projectByID(project_id);
-            return strapi.service('api::project.project').clac_project_auth(project,user_id);
         }
 
         // @ts-ignore
@@ -422,8 +418,7 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
             // @ts-ignore
             team.projects = await Promise.all(team.projects.map(async(i) => {
                 let res = {}
-                let { read } = await getProjectAuth(i.id);
-                // console.log('getProjectAuth read 1',read);
+                let read;
                 const role_of_project = await strapi.db.query('api::member-role.member-role').findMany({
                     where: {
                         members: {
@@ -439,13 +434,10 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                     const ACLs = role_of_project.map(i => i.ACL).flat(2)
                     const collections = ACLs.filter(j => j.collection === 'project')
                     // console.log('ACLs',ACLs);
-                    const canRead = collections.filter(i => i.read === true)
-                    // console.log('canRead',canRead);
-                    read = canRead?.length > 0
+                    read = collections.filter(i => i.read)?.length > 0
                 } else {
                     read = false
                 }
-                // console.log('getProjectAuth read 2',read);
                 if(read){
                     return {
                         ...i,
@@ -547,8 +539,8 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
         const [ user_id, members, member_roles ] = args;
         
         function hasIntersection(A, B) {
-          console.log('A', A)
-          console.log('B', B)
+        //   console.log('A', A)
+        //   console.log('B', B)
           const setA = new Set(A);
           const setB = new Set(B);
           return [...setA].some(element => setB.has(element));
@@ -615,5 +607,315 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
       ctx.room_name = `team_room_${user.default_team?.id}`;
       // 将客户端加入房间
       strapi.socket.leave(room_name);
+    },
+    async getTeamLevelLimit (args) {
+        const {team_id} = args;
+        
+        const owner_member = await strapi.db.query('api::member.member').findOne({
+            where: {
+                by_team: team_id,
+                member_roles: {
+                    subject: 'admin'
+                }
+            },
+            populate: {
+                by_user: {
+                    fields: ['id','username']
+                }
+            }
+        })
+        // console.log('owner_user', owner_member)
+        const owner_user = owner_member.by_user
+        const team_admin = await strapi.entityService.findOne('plugin::users-permissions.user',owner_user.id, {
+            fields: ['user_level', 'level_expiry_time']
+        });
+        // console.log('team_admin', team_admin)
+        
+        const level_entry = await strapi.db.query('api::system.system').findOne({
+            where: {
+                id: 1
+            },
+            populate: {
+                user_level: true
+            }
+        })
+        const level = team_admin.user_level || 'Regular'
+        let level_detail = level_entry.user_level.find(i => i.title === level);
+        level_detail.expiry_time = team_admin.level_expiry_time
+        
+        return level_detail
+    },
+    async countCardsNumber(args) {
+        const { team_id, project_id } = args;
+        let by_members = {};
+        if(team_id){
+            by_members = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            by_members = {
+                by_project: project_id
+            }
+        }
+        const countCards = await strapi.db.query('api::card.card').count({
+            where: {
+                creator: {
+                    by_members: by_members
+                }
+            }
+        })
+        // console.log('countCards', countCards)
+
+        return countCards
+    },
+    async countMember(args) {
+        const { team_id, project_id } = args;
+        let params = {};
+        if(team_id){
+            params = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            params = {
+                by_project: project_id
+            }
+        }
+        // console.log('params', params)
+        const count = await strapi.db.query('api::member.member').count({
+            where: params
+        })
+        // console.log('count', count)
+        
+
+        return count
+    },
+    async countOverviewSize (args) {
+        const { team_id, project_id } = args;
+        let by_members = {};
+        if(team_id){
+            by_members = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            by_members = {
+                by_project: project_id
+            }
+        }
+        // 查询所有相关的 overview
+        const count = await strapi.db.query('api::overview.overview').count({
+            where: {
+                creator: {
+                    by_members: by_members
+                },
+            }
+        });
+    
+        let totalSize = 0;
+        let offset = 0;
+        let fetchedCount = 0; // 当前已获取的数量
+    
+        do {
+            // console.log('开始执行查询')
+            const overviews = await strapi.db.query('api::overview.overview').findMany({
+                where: {
+                    creator: {
+                        by_members: by_members
+                    },
+                },
+                select: ['id'],
+                offset: offset,
+                limit: offset,
+                populate: {
+                    media: {
+                        select: ['size']
+                    },
+                },
+            });
+    
+            const sizes = overviews.filter(i => i.media?.size)?.map(j => j.media.size);
+            // console.log('获取所有size', sizes)
+            totalSize += sizes.reduce((accumulator, currentValue) => {
+                return accumulator + currentValue; // 累加当前值
+            }, 0);
+            // console.log('获取所有size', sizes)
+    
+            fetchedCount = overviews.length; // 更新当前已获取的数量
+            // console.log('更新当前已获取的数量', fetchedCount)
+            offset += fetchedCount; // 更新偏移量
+            // console.log('更新偏移量', offset)
+    
+        } while (fetchedCount > 0 && offset < count); // 当获取到的数据量大于0且未达到总数时继续查询
+    
+        // console.log(result)
+        return totalSize
+    },
+    async countStorageFileSize (args) {
+        const { team_id, project_id } = args;
+        let by_members = {};
+        if(team_id){
+            by_members = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            by_members = {
+                by_project: project_id
+            }
+        }
+        // 查询所有相关的 overview
+        const count = await strapi.db.query('api::storage-file.storage-file').count({
+            where: {
+                creator: {
+                    by_members: by_members
+                },
+            }
+        });
+    
+        let totalSize = 0;
+        let offset = 0;
+        let fetchedCount = 0; // 当前已获取的数量
+    
+        do {
+            // console.log('开始执行查询')
+            const files = await strapi.db.query('api::storage-file.storage-file').findMany({
+                where: {
+                    creator: {
+                        by_members: by_members
+                    },
+                },
+                select: ['id'],
+                offset: offset,
+                limit: offset,
+                populate: {
+                    file: {
+                        select: ['size']
+                    },
+                },
+            });
+    
+            const sizes = files.filter(i => i.file?.size)?.map(j => j.file.size);
+            // console.log('获取所有size', sizes)
+            totalSize += sizes.reduce((accumulator, currentValue) => {
+                return accumulator + currentValue; // 累加当前值
+            }, 0);
+            // console.log('获取所有size', sizes)
+    
+            fetchedCount = files.length; // 更新当前已获取的数量
+            // console.log('更新当前已获取的数量', fetchedCount)
+            offset += fetchedCount; // 更新偏移量
+            // console.log('更新偏移量', offset)
+    
+        } while (fetchedCount > 0 && offset < count); // 当获取到的数据量大于0且未达到总数时继续查询
+    
+        // console.log(result)
+        return totalSize
+    },
+    async countTodoAttachmentSize (args) {
+        const { team_id, project_id } = args;
+        let by_members = {};
+        if(team_id){
+            by_members = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            by_members = {
+                by_project: project_id
+            }
+        }
+        // 查询所有相关的 overview
+        const count = await strapi.db.query('api::todo.todo').count({
+            where: {
+                creator: {
+                    by_members: by_members
+                },
+            }
+        });
+    
+        let totalSize = 0;
+        let offset = 0;
+        let fetchedCount = 0; // 当前已获取的数量
+    
+        do {
+            // console.log('开始执行查询')
+            const todos = await strapi.db.query('api::todo.todo').findMany({
+                where: {
+                    creator: {
+                        by_members: by_members
+                    },
+                },
+                select: ['id'],
+                offset: offset,
+                limit: offset,
+                populate: {
+                    attachment: {
+                        select: ['size']
+                    },
+                },
+            });
+    
+            const sizes = todos.filter(i => i.attachment?.size)?.map(j => j.attachment.size);
+            // console.log('获取所有size', sizes)
+            totalSize += sizes.reduce((accumulator, currentValue) => {
+                return accumulator + currentValue; // 累加当前值
+            }, 0);
+            // console.log('获取所有size', sizes)
+    
+            fetchedCount = todos.length; // 更新当前已获取的数量
+            // console.log('更新当前已获取的数量', fetchedCount)
+            offset += fetchedCount; // 更新偏移量
+            // console.log('更新偏移量', offset)
+    
+        } while (fetchedCount > 0 && offset < count); // 当获取到的数据量大于0且未达到总数时继续查询
+    
+        // console.log(result)
+        return totalSize
+    },
+    async countStorageSize(args) {
+        const { team_id, project_id } = args;
+        let params = {};
+        if(team_id){
+            params = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            params = {
+                by_project: project_id
+            }
+        }
+        const overviewSize = await strapi.service('api::team.team').countOverviewSize(team_id, project_id)
+        const fileSize = await strapi.service('api::team.team').countStorageFileSize(team_id, project_id)
+        const todoAttachmentSize = await strapi.service('api::team.team').countTodoAttachmentSize(team_id, project_id)
+        
+        return overviewSize + fileSize + todoAttachmentSize
+    },
+    
+    async statistics (args) {
+        const { team_id, project_id } = args;
+        // console.log('team_id, project_id', team_id, project_id)
+        let params = {};
+        if(team_id){
+            params = {
+                by_team: team_id
+            }
+        }
+        if(project_id){
+            params = {
+                by_project: project_id
+            }
+        }
+        // console.log('params a', params)
+        const storage_size = await strapi.service('api::team.team').countStorageSize({team_id, project_id})
+        const cards_number = await strapi.service('api::team.team').countCardsNumber({team_id, project_id})
+        const member_number = await strapi.service('api::team.team').countMember({team_id, project_id})
+        return {
+            storage_size,
+            cards_number,
+            member_number
+        }
     }
 }));

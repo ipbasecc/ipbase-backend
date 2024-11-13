@@ -771,6 +771,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                     data: {
                         title: `${card.name} 的任务看板`,
                         type: 'kanban',
+                        creator: user_id,
                         status: 'pending',
                         publishedAt: iso,
                         relate_by_card: card.id
@@ -788,6 +789,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         by_card: {
                             set: [card.id]
                         },
+                        creator: user_id,
                         publishedAt: iso
                     }
                 })

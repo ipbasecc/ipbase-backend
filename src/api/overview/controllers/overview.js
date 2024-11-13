@@ -81,6 +81,7 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             return
         }
         let params = data;
+        params.creator = user_id;
 
         var now = new Date();
         var iso = now.toISOString();
@@ -108,22 +109,6 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             }
         })
         if(new_overview) {
-            if(new_overview.media){
-                process.nextTick(async () => {
-                media_size = new_overview.media.size || 0
-                    try {
-                        const params = {
-                              overview: new_overview,
-                              size: media_size,
-                              prv_size: 0
-                          }
-                        //   console.log('process.nextTick start', params);
-                      await strapi.service('api::project.project').updateProjectTotalFileSize(params);
-                    } catch (error) {
-                      console.error('After update processing error:', error);
-                    }
-                });
-            }
             response.data = new_overview
             strapi.$publish('overview:created', [ctx.room_name], response);
             return new_overview;
@@ -278,13 +263,6 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
             
             process.nextTick(async () => {
                 try {
-                    const params = {
-                          overview: update_overview,
-                          size: media_size || 0,
-                          prv_size: prv_media_size || 0
-                      }
-                    //   console.log('process.nextTick start', params);
-                  await strapi.service('api::project.project').updateProjectTotalFileSize(params);
                   if(prv_media_url){
                     const params = {
                       url: prv_media_url,

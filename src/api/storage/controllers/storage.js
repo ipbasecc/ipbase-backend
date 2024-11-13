@@ -346,22 +346,10 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                             // console.log('process.nextTick belongedInfo');
                             const project = belongedInfo.belonged_project
                             if(project){
-                                const params = {
-                                      project: project,
-                                      size: 0,
-                                      prv_size: total_remove_size
-                                  }
-                                //   console.log('process.nextTick start', params);
-                              await strapi.service('api::project.project').updateProjectTotalFileSize(params);
                               // 删除多个文件
                               source_file_need_delete.map(async(i) => {
                                   await strapi.plugins.upload.services.upload.remove({id: i});
                               })
-                              
-                                // await strapi.plugins.upload.services.upload.removeFiles(source_file_need_delete);
-                                // await strapi.plugins.upload.services.upload.removeFiles(
-                                //   fileIds.source_file_need_delete(id => ({ id }))
-                                // );
                             }
                         }
         

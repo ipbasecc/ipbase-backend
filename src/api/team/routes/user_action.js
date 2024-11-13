@@ -65,6 +65,11 @@ module.exports = {
           method: 'GET',
           path: '/teams/:team_id/members',
           handler: 'team.listMembers'
+        },
+        {
+          method: 'GET',
+          path: '/teams/:team_id/statistics',
+          handler: 'team.statistics'
         }
     ]
 }

@@ -59,6 +59,12 @@
       "relation": "oneToMany",
       "target": "api::todo.todo",
       "mappedBy": "by_overview"
+    },
+    "creator": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "overview"
     }
   }
 }

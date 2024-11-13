@@ -62,6 +62,7 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
         new_column = await strapi.entityService.create('api::column.column',{
             data: {
                 name: column_name_by_type,
+                creator: user_id,
                 publishedAt: iso
             }
         })
@@ -70,6 +71,7 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
             data: {
                 title: kanban_name_by_type,
                 type: data?.type || 'kanban',
+                creator: user_id,
                 columns: {
                     connect: [new_column.id]
                 },
@@ -80,6 +82,7 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
         new_group = await strapi.entityService.create('api::group.group',{
             data: {
                 name: kanban_name_by_type,
+                creator: user_id,
                 kanbans: {
                     connect: [new_kanban.id]
                 },
@@ -91,6 +94,7 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
                 data: {
                     name: data.name,
                     type: data.type || 'kanban',
+                    creator: user_id,
                     publishedAt: iso,
                     project: {
                         set: [data.project_id]

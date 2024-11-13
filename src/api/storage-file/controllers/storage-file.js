@@ -28,7 +28,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                     name: i.name,
                     file: i.file_id,
                     storage: i.storage_id,
-                    owner: user_id
+                    creator: user_id
                   },
                   populate: {
                     file: {
@@ -138,13 +138,6 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                         // console.log('process.nextTick belongedInfo');
                         const project = belongedInfo.belonged_project || belongedInfo.rootProject
                         if(project){
-                            const params = {
-                                  project: project,
-                                  size: 0,
-                                  prv_size: storage_file.file?.size || 0
-                              }
-                            //   console.log('process.nextTick start', params);
-                          await strapi.service('api::project.project').updateProjectTotalFileSize(params);
                             await strapi.plugins.upload.services.upload.remove({
                               id: { $in: [storage_file.file?.id] }  // fileIds 是一个 ID 数组
                             });

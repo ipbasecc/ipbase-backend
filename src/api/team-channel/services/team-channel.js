@@ -95,7 +95,12 @@ module.exports = createCoreService('api::team-channel.team-channel',({strapi}) =
             unconfirmed: false,
             field: false,
         }
-        const channel = await strapi.service('api::team-channel.team-channel').findChannelByID(channel_id);
+        const channel = await strapi.db.query('api::team-channel.team-channel').findOne({
+            where: {
+                id: channel_id
+            },
+            select: ['mm_channel']
+        })
         const memberRoles = await strapi.db.query('api::member-role.member-role').findMany({
           where: {
             members: {

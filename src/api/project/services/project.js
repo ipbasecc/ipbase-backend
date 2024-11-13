@@ -114,7 +114,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
     },
     calc_field_ACL(...args) {
       const [ACL,collection,field] = args;
-      const collection_ACL = ACL.filter(p => p.collection === collection);
+      const collection_ACL = ACL.map(i => i.ACL)?.flat(2)?.filter(p => p.collection === collection);
       
       return collection_ACL.map(i => i.fields_permission).flat(2).filter(j => j.modify && j.field === field)?.length > 0
     },
@@ -127,10 +127,10 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
       return authed_fields
     },
     async find_projectByID(...args) {
-      const [proj_id] = args
+      const [project_id] = args
       const populate = strapi.service('api::project.project').response_template();
       
-      let project = await strapi.entityService.findOne('api::project.project', proj_id,{
+      let project = await strapi.entityService.findOne('api::project.project', project_id,{
         populate: populate
       });
       if(project){
@@ -861,38 +861,6 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
             }
         }
         return res
-    },
-    async updateProjectTotalFileSize(args) {
-        
-        const {overview,project,size,prv_size} = args;
-        
-        const updateTotleSize = async (project_id) => {
-            await strapi.db.connection
-              .table('projects')
-              .where('id', project_id)
-              .update({
-                total_filesize: strapi.db.connection.raw('GREATEST(0, total_filesize + ?)', [size - prv_size])
-              });
-        }
-        let project_id
-        if(project){
-            project_id = project.id
-        }
-        if(project_id){
-            await updateTotleSize(project_id)
-        }
-        if(overview?.project){
-            project_id = overview.project.id
-        }
-        if(!project_id && overview?.card){
-            const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(overview.card.id);
-            if(belongedInfo.belonged_project){
-                project_id = belongedInfo.belonged_project.id
-            }
-        }
-        if(!project_id && project){
-            project_id = project.id
-        }
     }
   }));
   

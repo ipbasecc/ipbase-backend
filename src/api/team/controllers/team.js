@@ -96,6 +96,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             })
             // console.lgo('team', team)
             if(team){
+                
+                team.level_limit = await strapi.service('api::team.team').getTeamLevelLimit({team_id: team.id})
+                
                 if(!team.publishedAt){
                     ctx.throw(404, '该团队已被归档')
                 } else {
@@ -163,6 +166,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             const params = {
                 name: data.name,
                 display_name: data.display_name,
+                creator: user_id,
                 members: member_ids,
                 member_roles: roles_ids,
                 publishedAt: new Date(),
@@ -335,88 +339,63 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         if(!user_id){
             ctx.throw(400, '请先登陆')
         }
-        let team = await strapi.db.query('api::team.team').findOne({
+        let roles = await strapi.db.query('api::member-role.member-role').findMany({
             where: {
-                id: team_id,
+                by_team: team_id,
                 members: {
                     by_user: user_id
                 }
-            },
-            populate: {
-                member_roles: {
-                    filter: {
-                        members: {
-                            by_user: user_id
-                        }
-                    },
-                    populate: {
-                        members: {
-                            by_user: user_id
-                        }
-                    }
-                },
-                team_channels: true
             }
         })
-        // console.log(team)
-        if(team){
-            if(!team.publishedAt){
-                ctx.throw(403, '改团队已被归档')
-            } else {
-                let roles = []
-                for(const role of team.member_roles) {
-                    if(role.members?.length > 0){
-                        roles.push(role)
+        console.log(roles)
+        if(roles){
+            // console.log('roles', roles)
+            const isUnconfirmed = roles.map(i => i.subject).includes('unconfirmed');
+            const isBlocked = roles.map(i => i.subject).includes('blocked');
+            
+            if(!isUnconfirmed && !isBlocked){
+                console.log('query')
+                const totalCount = await strapi.db.query('api::member.member').count({
+                    where: {
+                        by_team: team_id // 统计条件
                     }
-                }
-                // console.log('roles', roles)
-                const isUnconfirmed = roles.map(i => i.subject).includes('unconfirmed');
-                const isBlocked = roles.map(i => i.subject).includes('blocked');
-                
-                if(!isUnconfirmed && !isBlocked){
-                    // console.log('query')
-                    const totalCount = await strapi.db.query('api::member.member').count({
-                        where: {
-                            by_team: team.id // 统计条件
-                        }
-                    });
-                    const members = await strapi.db.query('api::member.member').findMany({
-                        where: {
-                            by_team: team.id
-                        },
-                        offset: offset - 1,
-                        limit: limit,
-                        populate: {
-                            by_user: {
-                                select: [ 'id','username', 'mm_profile'],
-                                populate: {
-                                    profile: {
-                                        populate: {
-                                            avatar: {
-                                                select: ['id','ext','url']
-                                            }
+                });
+                const members = await strapi.db.query('api::member.member').findMany({
+                    where: {
+                        by_team: team_id
+                    },
+                    offset: offset - 1,
+                    limit: limit,
+                    populate: {
+                        by_user: {
+                            select: [ 'id','username', 'mm_profile'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            select: ['id','ext','url']
                                         }
                                     }
                                 }
-                            },
-                            member_roles: true
-                        }
-                    }).catch((err) => {
-                        console.error(err, 'error when list team members')
-                    })
-                    // console.log('query end', members)
-                    if(members) {
-                        // 计算 hasMore 字段
-                        const hasMore = totalCount > offset + limit;
-                            return {
-                                members,
-                                totalCount,
-                                hasMore
-                            };
+                            }
+                        },
+                        member_roles: true
                     }
-                } else {
-                    ctx.throw(403, '您无权查访问内容')
+                }).catch((err) => {
+                    console.error(err, 'error when list team members')
+                })
+                console.log('query end', members)
+                if(members) {
+                    // 计算 hasMore 字段
+                    const hasMore = totalCount > offset + limit;
+                        return {
+                            members,
+                            totalCount,
+                            hasMore
+                        };
                 }
+            } else {
+                ctx.throw(403, '您无权查访问内容')
             }
         } else {
             ctx.throw(403, '仅限团队成员访问')
@@ -1136,6 +1115,35 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             } else {
                 ctx.throw(403, '您无权执行此操作')
             }
+        }
+    },
+    async statistics (args) {
+        const user_id = Number(ctx.user?.id);
+        let { team_id } = ctx.params;
+        
+        let user
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
+        const user_role = await strapi.db.query('api::member-role.member-role').findOne({
+            where: {
+                members: {
+                    by_user: user_id
+                },
+                by_team: team_id
+            }
+        })
+        if(user_role){
+            const auth = user_role.ACL?.find(i => i.subject === 'team' && i.read);
+            if(auth){
+                return await strapi.service('api::team.team').statistics({
+                    team_id: team_id
+                })
+            } else {
+                ctx.throw(403, '您没有权限查看此内容')
+            }
+        } else {
+            ctx.throw(403, '仅限团队成员可见')
         }
     }
 }));

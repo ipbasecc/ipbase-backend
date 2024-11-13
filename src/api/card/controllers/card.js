@@ -270,6 +270,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
             let cardEntry;
             let new_overview_parmars = {
                 name: 'Initial_Version',
+                creator: user_id,
                 publishedAt: iso
             }
             if(data.media){
@@ -531,54 +532,7 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
                     pulled: true
                 }
             })
-            // console.log('_updateCard', _updateCard)
-            // 后台执行：如果用户下架商品，减小项目占用空间统计，因为卖出的产品还要被购买者查看
-            process.nextTick(async () => {
-                if(belongedInfo.belonged_project){
-                    // 查询到所有与此卡片关联的已经成交的订单
-                    const orders = await strapi.db.query('api::order.order').findMany({
-                        where: {
-                            card: card_id,
-                            orderState: 2
-                        },
-                        populate: {
-                            card: {
-                                populate: {
-                                    overviews: {
-                                        populate: {
-                                            media: {
-                                                fields: ['id','size','url']
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    })
-                    //筛选出所有有媒体文件的内容
-                    const overviews = orders.map(i => i.card.overviews).flat(2).filter(j => j.media?.size > 0)
-                    if(overviews?.length > 0){
-                        //统计出媒体总大小
-                        let prv_size = 0
-                        for (const overview of overviews){
-                            prv_size + overview.media.size
-                        }
-                        if(prv_size > 0){
-                            // 减掉项目存储占用
-                            try {
-                                const params = {
-                                      project: belongedInfo.belonged_project,
-                                      size: 0,
-                                      prv_size: prv_size
-                                  }
-                              await strapi.service('api::project.project').updateProjectTotalFileSize(params);
-                            } catch (error) {
-                              console.error('After update processing error:', error);
-                            }
-                        }
-                    }
-                }
-            });
+            
             const _resp_card_data = {
                 id: card_id,
                 type: card.type,
@@ -611,8 +565,8 @@ module.exports = createCoreController('api::card.card',({strapi}) => ({
         auth = modify;
         // console.log('ACL', ACL);
         fields_permission = authed_fields
-        orderTodogroup = strapi.service('api::project.project').calc_field_ACL(ACL,'todogroups','order');
-        orderTodo = strapi.service('api::project.project').calc_field_ACL(ACL,'todo','order');
+        orderTodogroup = ACL.find(i => i.collection === 'todogroups')?.fields_permission?.find(j => j.field === 'order' && j.modify);
+        orderTodo = ACL.find(i => i.collection === 'todo')?.fields_permission?.find(j => j.field === 'order' && j.modify);
 
         // console.log('orderTodogroup',orderTodogroup,'orderTodo',orderTodo);
         

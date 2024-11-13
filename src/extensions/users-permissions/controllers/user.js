@@ -1,6 +1,9 @@
 // src/extensions/users-permissions/controllers/user.js
 const userService = require('../services/userService');
 const team_populate = {
+    creator: {
+        fields: ['id']
+    },
     members: {
         populate: {
             by_user: {
@@ -229,6 +232,9 @@ const responseUser = {
         },
         default_team: {
             populate: {
+                creator: {
+                    fields: ['id']
+                },
                 members: {
                     populate: {
                         by_user: {
@@ -363,7 +369,7 @@ const responseUser = {
     }
 };
 
-module.exports = (strapi) => {
+module.exports = ({ strapi, originalController }) => {
     return {
         init: async (ctx) => {
             const user_id = Number(ctx.state.user.id);
@@ -372,11 +378,28 @@ module.exports = (strapi) => {
             }
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, responseUser);
             if(user) {
+                const level_entry = await strapi.db.query('api::system.system').findOne({
+                    where: {
+                        id: 1
+                    },
+                    populate: {
+                        user_level: true
+                    }
+                })
+                const level = user.user_level || 'Regular'
+                user.user_level = level_entry.user_level.find(i => i.title === level)
                 if(user.default_team){
                     const team_id = user.default_team.id;
                     if (team_id) {
                       strapi.service('api::team.team').join(team_id);
+                        const statistics = await strapi.service('api::team.team').statistics({
+                            team_id: team_id
+                        })
+                        if(statistics){
+                            user.default_team.statistics = statistics
+                        }
                     }
+                    user.default_team.level_detail = await strapi.service('api::team.team').getTeamLevelLimit({team_id: team_id})
                 } else {
                     let teams = await strapi.entityService.findMany('api::team.team',{
                         filters: {
@@ -434,8 +457,8 @@ module.exports = (strapi) => {
                         user.contact = contact
                     }
                 }
-                return user
-                // return await userService.processUserdata(user, user_id)
+                // return user
+                return await userService.processUserdata(user, user_id)
             }
         },
         updateTodogroups: async (ctx) => {
@@ -609,6 +632,7 @@ module.exports = (strapi) => {
                     const team_id = update.default_team.id;
                     if (team_id) {
                       strapi.service('api::team.team').join(team_id);
+                      update.default_team.level_detail = await strapi.service('api::team.team').getTeamLevelLimit({team_id: team_id})
                     }
                 }
                 update = await userService.processUserdata(update, user_id)
@@ -637,11 +661,13 @@ module.exports = (strapi) => {
               ctx.throw(403, '没有权限')
             }
             let params = {};
+            // console.log('data',data);
             const _has = (val) => {
                 // console.log('data',data);
                 return data.hasOwnProperty(val)
             }
             if(_has('initialization')){
+                // console.log('initialization', data?.initialization);
                 params.initialization = data?.initialization
             }
             if(_has('feature_key')){
@@ -653,7 +679,8 @@ module.exports = (strapi) => {
             })
             if(user) {
             //   console.log('user',user);
-              return await userService.processUserdata(user, user_id)
+              await userService.processUserdata(user, user_id)
+              return await originalController.update(ctx);
             }
         },
         findKanbanByTodogroup: async (ctx) => {

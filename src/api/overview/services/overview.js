@@ -150,13 +150,6 @@ module.exports = createCoreService('api::overview.overview',({strapi}) => ({
             if(overview.media) {
                 process.nextTick(async () => {
                     try {
-                        const params = {
-                              overview: overview,
-                              size: 0,
-                              prv_size: overview.media?.size || 0
-                          }
-                        //   console.log('process.nextTick start', params);
-                        await strapi.service('api::project.project').updateProjectTotalFileSize(params);
                         if(overview.media?.url){
                             const ali_params = {
                               url: overview.media?.url,

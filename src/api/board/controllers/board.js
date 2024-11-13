@@ -175,10 +175,6 @@ module.exports = createCoreController('api::board.board',({strapi}) => ({
             const members = project.project_members;
             const member_roles = project.member_roles;
             calc_auth(members,member_roles);
-        } else if (board?.board_members){
-            const members = board.board_members;
-            const member_roles = project.member_roles;
-            calc_auth(members,member_roles);
         } else {
             ctx.throw(404, '根据您提供的Board ID，无法定位对应的权限')
         }

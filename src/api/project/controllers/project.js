@@ -102,12 +102,13 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
     async findOne(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
-        const proj_id = ctx.request.params.id;
+        const project_id = ctx.request.params.id;
 
         let auth;
         let __ACL;
         let fields_permission = []
-        const project = await strapi.service('api::project.project').find_projectByID(proj_id);
+        let project = await strapi.service('api::project.project').find_projectByID(project_id);
+        // console.log('project',project);
         if(project){
             const {
                 read, create, modify, remove, is_blocked, role_names, ACL
@@ -144,6 +145,8 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             }
         }
+        
+        //处理项目的邀请码，只返回用户自己创建的邀请码
         const process_schedule_share = (project) => {
             let _project = project
             let schedules = project.schedules.map((i) => ({
@@ -153,6 +156,8 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             _project.schedules = schedules;
             return _project
         }
+        
+        //如果是开放项目，直接返回
         if(project?.type === 'O') {
             return process_schedule_share(project)
         }
@@ -356,17 +361,20 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 data: {
                     name: 'Initial_Version',
                     version: 1,
+                    creator: user_id,
                     publishedAt: iso,
                     media: {
                         // 新建项目时，可能会提前指定预览图、如果没有指定，则默认给一个预览、在env中设置 strapi的 media ID
                         set: [data.overview_media || process.env.DEFAULT_PROJECT_OVERVIEW_MEIDA]
-                    }
+                    },
+                    creator: user_id
                 }
             })
         }
         new_column = await strapi.entityService.create('api::column.column',{
             data: {
                 name: 'Initial_Column',
+                creator: user_id,
                 publishedAt: iso,
                 status: 'pending'
             }
@@ -375,6 +383,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             new_kanban = await strapi.entityService.create('api::kanban.kanban',{
                 data: {
                     title: 'Initial_Kanban',
+                    creator: user_id,
                     columns: {
                         connect: [new_column.id]
                     },
@@ -385,6 +394,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             new_group = await strapi.entityService.create('api::group.group',{
                 data: {
                     name: 'Initial_Group',
+                    creator: user_id,
                     kanbans: {
                         connect: [new_kanban.id]
                     },
@@ -395,6 +405,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             new_board = await strapi.entityService.create('api::board.board',{
                 data: {
                     name: 'Workspace',
+                    creator: user_id,
                     groups: {
                         connect: [new_group.id]
                     },
@@ -407,6 +418,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 data: {
                     name: 'Project_schedule',
                     type: 'P',
+                    creator: user_id,
                     can_read_user: {
                         set: [user_id]
                     },
@@ -1003,7 +1015,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 ctx.throw(404, '项目已归档，不能修改')
             } else if(role_names.includes('unconfirmed')){
                 auth = false
-                return '您无权执行此操作'
+                return '非正式成员不能执行只操作'
             }else if(role_names.includes('external')){
                 auth = false
                 ctx.throw(400, '外部成员不允许修改项目')
@@ -1011,6 +1023,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
             const projcet_members_roles_IDs = project.member_roles.map(i => i.id);
             const new_roles_isIN = body.new_roles.every(i => projcet_members_roles_IDs.includes(i));
+            // console.log(ACL)
 
             auth = new_roles_isIN && strapi.service('api::project.project').calc_field_ACL(ACL,'project','manageRole');
         }

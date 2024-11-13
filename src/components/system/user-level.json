@@ -9,25 +9,16 @@
     "title": {
       "type": "enumeration",
       "enum": [
-        "Normal",
+        "Regular",
         "Professional",
         "Enterprise"
       ],
-      "default": "Normal"
+      "default": "Regular"
     },
     "team_members_limit": {
       "type": "integer"
     },
     "team_storage_max_limit": {
-      "type": "biginteger"
-    },
-    "project_members_limit": {
-      "type": "integer"
-    },
-    "project_total_cards_limit": {
-      "type": "integer"
-    },
-    "project_storage_max_limit": {
       "type": "integer"
     },
     "singal_file_limit": {
@@ -35,6 +26,9 @@
     },
     "enable_functions": {
       "type": "json"
+    },
+    "card_number_limit": {
+      "type": "integer"
     }
   }
 }

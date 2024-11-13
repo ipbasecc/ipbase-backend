@@ -18,6 +18,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": true
+                            },
+                            {
+                                "field": "statistics",
+                                "read": true
                             }
                         ]
                     },
@@ -89,6 +93,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "statistics",
+                                "read": false
                             }
                         ]
                     },
@@ -160,6 +168,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "statistics",
+                                "read": false
                             }
                         ]
                     },
@@ -231,6 +243,10 @@ module.exports = {
                             {
                                 "field": "manageMember",
                                 "modify": false
+                            },
+                            {
+                                "field": "statistics",
+                                "read": false
                             }
                         ]
                     },
