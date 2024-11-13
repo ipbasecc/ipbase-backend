@@ -17,7 +17,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         if(!user_id){
             ctx.throw(500, '请先登陆')
         }
-        
+
         let file_for_get_project
         let total_size = 0
         const batchCreate = async (Arr) => {
@@ -48,9 +48,9 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                 return null;
               }
             });
-          
+
             const results = await Promise.allSettled(promises);
-          
+
             // 过滤掉失败的 Promise 结果
             const successfulResults = results
               .filter((result) => result.status === 'fulfilled')
@@ -58,7 +58,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
               .map((result) => result.value);
             return successfulResults;
           };
-          
+
         const result = await batchCreate(data);
         if(result){
             // console.log('result result', result);
@@ -67,7 +67,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                 data: result
             }
             strapi.$publish('file:batchCreated', [ctx.room_name], response);
-            
+
             process.nextTick(async () => {
                 try {
                     // console.log('file_for_get_project', file_for_get_project, total_size);
@@ -90,7 +90,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                   console.error('After update processing error:', error);
                 }
             });
-            
+
             return result
         }
     },
@@ -121,27 +121,25 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
             strapi.$publish('file:removed', [ctx.room_name], response);
             process.nextTick(async () => {
                 try {
-                    // console.log('process.nextTick start');
-                    const belongedInfo = await strapi.service('api::storage-file.storage-file').find_belongedInfo_byFileID(id);
                     const storage_file = await strapi.db.query('api::storage-file.storage-file').findOne({
                         where: {
                             id: id
                         },
                         populate: {
                             file: {
-                                fields: ['id','size']
+                                fields: ['id','size','url']
                             }
                         }
                     })
-                    // console.log('process.nextTick belongedInfo', belongedInfo);
-                    if(belongedInfo){
-                        // console.log('process.nextTick belongedInfo');
-                        const project = belongedInfo.belonged_project || belongedInfo.rootProject
-                        if(project){
-                            await strapi.plugins.upload.services.upload.remove({
-                              id: { $in: [storage_file.file?.id] }  // fileIds 是一个 ID 数组
-                            });
+                    if(storage_file){
+                        await strapi.plugins.upload.services.upload.remove({
+                          id: { $in: [storage_file.file?.id] }  // fileIds 是一个 ID 数组
+                        });
+                        const ali_params = {
+                          url: storage_file.file?.url,
+                          urls: null,
                         }
+                        await strapi.service('api::ali.ali').removeObject(ali_params)
                     }
                 } catch (error) {
                   console.error('After update processing error:', error);
