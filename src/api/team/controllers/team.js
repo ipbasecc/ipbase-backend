@@ -11,12 +11,16 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         }
+        // todo 需要增加分页
         let teams = await strapi.db.query('api::team.team').findMany({
             where: {
                 members: {
                     by_user: user_id
+                },
+                publishedAt: {
+                    $null: false  // 只查询已发布的团队
                 }
             },
             populate: {
@@ -36,33 +40,20 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         })
         
         if(teams){
-            let filter = teams.filter(i => i.publishedAt);
-            // @ts-ignore
-            filter = filter?.length > 0 && filter.map((i) => {
-                const roles = i.member_roles.map(j => j.subject)
-                // console.log('roles',roles)
+            for (const team of teams) {
+                // 使用 Set 提高查找效率
+                const roleSet = new Set(team.member_roles.map(role => role.subject));
                 
-                const user_roles = i.members?.filter(i => i.by_user.id === user_id).map(i => i.member_roles).flat(2);
-                const unconfirmeds = roles.includes('unconfirmed')
-                const blockeds = roles.includes('blocked')
-                // console.log('unconfirmeds',unconfirmeds)
-                if(unconfirmeds?.length > 0){
-                    delete i.members // 未正式加入的成员，不要向其发送成员数据
-                    return {
-                        ...i,
-                        status: 'unconfirmed'
-                    }
-                } else if(blockeds?.length > 0){
-                    delete i.members // 未正式加入的成员，不要向其发送成员数据
-                    return {
-                        ...i,
-                        status: 'blocked'
-                    }
-                } else {
-                    return i
+                if (roleSet.has('unconfirmed')) {
+                    team.status = 'unconfirmed';
+                    delete team.members;
+                } else if (roleSet.has('blocked')) {
+                    team.status = 'blocked';
+                    delete team.members;
                 }
-            })
-            return filter
+            }
+            
+            return teams;
         }
     },
     async findOne(ctx) {
@@ -72,7 +63,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         
         let user
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         }
         const userMemberRoles = await strapi.service('api::team.team').getMemberRolesByTeam(user_id, team_id);
         if(userMemberRoles?.length > 0){
@@ -94,7 +85,6 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                     team_channels: true
                 }
             })
-            // console.lgo('team', team)
             if(team){
                 
                 team.level_limit = await strapi.service('api::team.team').getTeamLevelLimit({team_id: team.id})
@@ -145,7 +135,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
 
         let user
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
@@ -184,21 +174,33 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             if(team) {
                 team.team_channels = []
                 if(data.mm_channels && data.mm_team){
-                    for(const i of data.mm_channels) {
-                        const params = {
-                            name: i.name,
-                            type: i.type,
-                            mm_channel: i
+                    const channelCreationPromises = data.mm_channels.map(async (i) => {
+                        try {
+                            const params = {
+                                name: i.name,
+                                type: i.type,
+                                mm_channel: i
+                            }
+                            
+                            if(i.name === 'town-square' || i.display_name === 'town-square'){
+                                params.name = user?.config?.lang === 'zh-CN' ? '公共频道' : 'town-square'
+                            }
+                            if(i.name === 'off-topic' || i.display_name === 'off-topic'){
+                                params.name = user?.config?.lang === 'zh-CN' ? '闲聊' : 'off-topic'
+                            }
+                            
+                            return strapi.service('api::team.team').createChannel(user_id, team.id, params)
+                        } catch (error) {
+                            console.error(`Failed to create channel ${i.name}:`, error);
+                            return null;
                         }
-                        if(i.name === 'town-square' || i.display_name === 'town-square'){
-                            params.name = user?.config?.lang === 'zh-CN' ? '公共频道' : 'town-square'
-                        }
-                        if(i.name === 'off-topic' || i.display_name === 'off-topic'){
-                          params.name = user?.config?.lang === 'zh-CN' ? '闲聊' : 'off-topic'
-                        }
-                        const _channel = await strapi.service('api::team.team').createChannel(user_id,team.id,params)
-                        team.team_channels.push(_channel);
-                    }
+                    });
+                    
+                    // 使用 Promise.allSettled 处理部分失败的情况
+                    const results = await Promise.allSettled(channelCreationPromises);
+                    team.team_channels = results
+                        .filter(result => result.status === 'fulfilled' && result.value)
+                        .map(result => result.value);
                 }
                 strapi.service('api::team.team').join(team.id);
                 return team
@@ -212,7 +214,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         // @ts-ignore
         const { data } = ctx.request.body
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
@@ -272,7 +274,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         
         let user
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
@@ -337,7 +339,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         // console.log(team_id, offset, limit)
         let user
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         }
         let roles = await strapi.db.query('api::member-role.member-role').findMany({
             where: {
@@ -347,14 +349,14 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
                 }
             }
         })
-        console.log(roles)
+        // console.log(roles)
         if(roles){
             // console.log('roles', roles)
             const isUnconfirmed = roles.map(i => i.subject).includes('unconfirmed');
             const isBlocked = roles.map(i => i.subject).includes('blocked');
             
             if(!isUnconfirmed && !isBlocked){
-                console.log('query')
+                // console.log('query')
                 const totalCount = await strapi.db.query('api::member.member').count({
                     where: {
                         by_team: team_id // 统计条件
@@ -404,6 +406,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async genInvite(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         let { team_id } = ctx.params;
         team_id = Number(team_id);
         const data = ctx.request.body
@@ -487,7 +492,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             const invite = team.invite_uris.find(i => i.invite_code === invite_code);
             // console.log('invite',invite);
             if(!invite){
-                ctx.throw(400, '邀请码无效')
+                ctx.throw(403, '邀请码无效')
             } else {
                 const isCreator = invite.invitor.id === user_id;
                 if(isCreator){
@@ -595,7 +600,7 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
             // 判断当前邀请码是不是有效的
             invite = team.invite_uris.find(i => i.invite_code === invite_code);
             if(!invite){
-                ctx.throw(400, '邀请码无效')
+                ctx.throw(403, '邀请码无效')
             } else {
                 // 对比当前时间与截至时间
                 let currentDate = new Date ().toISOString ();
@@ -690,6 +695,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async removeUser(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         const { team_id } = ctx.params;
         const body = ctx.request.body
         // @ts-ignore
@@ -793,6 +801,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async setRole(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         const { team_id } = ctx.params;
         // @ts-ignore
         const body = ctx.request.body.update_member
@@ -937,6 +948,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async leaveTeam(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         const { team_id } = ctx.params;
     
         const team = await strapi.service('api::team.team').findTeamByID(team_id);
@@ -989,12 +1003,15 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async findTeamDocuments(ctx) {
         await this.validateQuery(ctx);
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         // console.log(ctx.params)
         let { team_id } = ctx.params;
         const { page = 1, per_page = 10 } = ctx.query;
         // console.log(team_id, page, per_page)
         if(!user_id){
-            ctx.throw(400, '请先登陆')
+            ctx.throw(401, '请先登陆')
         } else {
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
@@ -1053,6 +1070,9 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
     async projectMeetAuth(ctx) {
         const { user } = ctx.state; 
         const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(401, '请先登陆')
+        }
         const { data } = ctx.request.body
         
         if(!data.project_id){
