@@ -1,0 +1,22 @@
+{
+  "kind": "singleType",
+  "collectionName": "platforms",
+  "info": {
+    "singularName": "platform",
+    "pluralName": "platforms",
+    "displayName": "platform",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "partner": {
+      "displayName": "partner",
+      "type": "component",
+      "repeatable": true,
+      "component": "system.partner"
+    }
+  }
+}

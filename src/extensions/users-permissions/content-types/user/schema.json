@@ -235,12 +235,6 @@
       "target": "api::storage.storage",
       "mappedBy": "belonged_user"
     },
-    "document": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::document.document",
-      "mappedBy": "creator"
-    },
     "projects": {
       "type": "relation",
       "relation": "manyToMany",
@@ -287,12 +281,6 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::schedule-event.schedule-event",
-      "mappedBy": "creator"
-    },
-    "created_schedule": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::schedule.schedule",
       "mappedBy": "creator"
     },
     "default_team": {
@@ -343,12 +331,6 @@
       "target": "api::notebook.notebook",
       "mappedBy": "user"
     },
-    "order": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::order.order",
-      "mappedBy": "buyer"
-    },
     "card": {
       "type": "relation",
       "relation": "oneToOne",
@@ -378,6 +360,100 @@
       "relation": "oneToMany",
       "target": "api::storage-file.storage-file",
       "mappedBy": "creator"
+    },
+    "order_transfer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::order-transfer.order-transfer",
+      "mappedBy": "withdrawer"
+    },
+    "daily_transaction": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::daily-transaction.daily-transaction",
+      "mappedBy": "by_user"
+    },
+    "business_account": {
+      "displayName": "business_account",
+      "type": "component",
+      "repeatable": false,
+      "component": "user.business-account",
+      "private": true
+    },
+    "income": {
+      "type": "integer",
+      "default": 0
+    },
+    "withdraw": {
+      "type": "integer",
+      "default": 0
+    },
+    "partner_level": {
+      "type": "enumeration",
+      "enum": [
+        "Regular",
+        "Professional",
+        "Enterprise"
+      ],
+      "default": "Regular"
+    },
+    "need_fill_business_account": {
+      "type": "boolean",
+      "default": true
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "buyer"
+    },
+    "documents": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::document.document",
+      "mappedBy": "creator"
+    },
+    "created_schedules": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::schedule.schedule",
+      "mappedBy": "creator"
+    },
+    "join_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::join-request.join-request",
+      "mappedBy": "request_user"
+    },
+    "response_join_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::join-request.join-request",
+      "mappedBy": "response_user"
+    },
+    "ali": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::ali.ali",
+      "mappedBy": "users"
+    },
+    "favorite_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "inversedBy": "favorite_by_users"
+    },
+    "like_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "inversedBy": "by_like_users"
+    },
+    "unlike_cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "inversedBy": "by_unlike_users"
     }
   }
 }

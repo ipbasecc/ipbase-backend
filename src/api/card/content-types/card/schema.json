@@ -169,7 +169,8 @@
       "mappedBy": "card"
     },
     "price": {
-      "type": "decimal"
+      "type": "decimal",
+      "default": 0
     },
     "employer": {
       "type": "relation",
@@ -204,6 +205,60 @@
     "pulled": {
       "type": "boolean",
       "default": false
+    },
+    "allow_discover": {
+      "type": "boolean",
+      "default": false
+    },
+    "by_favorites": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::favorite.favorite",
+      "mappedBy": "cards"
+    },
+    "favorite_by_users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "favorite_cards"
+    },
+    "by_like_users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "like_cards"
+    },
+    "by_unlike_users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "unlike_cards"
+    },
+    "resource_type": {
+      "type": "enumeration",
+      "enum": [
+        "video",
+        "audio",
+        "file"
+      ],
+      "default": "video"
+    },
+    "auth_type": {
+      "type": "enumeration",
+      "enum": [
+        "exclusive",
+        "commercial",
+        "non-commercia",
+        "educational",
+        "personal"
+      ],
+      "default": "commercial"
+    },
+    "auth_extened": {
+      "type": "json"
+    },
+    "price_by_auth": {
+      "type": "json"
     }
   }
 }

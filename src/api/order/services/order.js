@@ -31,7 +31,7 @@ paymentAPI.interceptors.request.use((config) => {
     'YSF_BAR',	//云闪付条码
     'YSF_JSAPI'	//云闪付jsapi
 ]
-const paySubjects = ['card']
+const paySubjects = ['card', 'project']
 
 const crypto = require('crypto');
 
@@ -41,13 +41,12 @@ module.exports = createCoreService('api::order.order', ({strapi}) => ({
     createPaymentMchOrderNO(...args) {
         const [user_id, wayCode, commodity] = args;
         const NumberByWayCode = wayCodes.findIndex(i => i === wayCode);
+        const ctx = strapi.requestContext.get();
         if(NumberByWayCode === -1){
-            const ctx = strapi.requestContext.get();
             ctx.throw(403, '无效的支付方式')
         }
         const subjectCode = paySubjects.findIndex(i => i === commodity.subject);
         if(subjectCode === -1){
-            const ctx = strapi.requestContext.get();
             ctx.throw(403, '无效的产品型号')
         }
         const stringToHexWithTimestamp = (str) => {
@@ -65,6 +64,19 @@ module.exports = createCoreService('api::order.order', ({strapi}) => ({
     async createPaymentOrder(params) {
         try {
           const { data } = await paymentAPI.post(`pay/unifiedOrder`,params);
+          return data
+        } catch (error) {
+          console.error(error.data);
+        }
+    },
+    async createTransferOrder(params) {
+        /**
+            适用对象：普通商户 特约商户
+            请求URL：https://pay.jeepay.vip/api/transferOrder
+            请求类型：application/json 或 application/x-www-form-urlencoded
+        */
+        try {
+          const { data } = await paymentAPI.post(`transferOrder`,params);
           return data
         } catch (error) {
           console.error(error.data);
@@ -88,6 +100,22 @@ module.exports = createCoreService('api::order.order', ({strapi}) => ({
         } catch (error) {
           console.error(error.data);
         }
+    },
+    createTransferMchOrderNo(...args) {
+        const [user_id, entryType, orders] = args;
+        
+        const ctx = strapi.requestContext.get();
+        if(!entryType){
+            ctx.throw(403, '请提供入账方式')
+        }
+        
+        if(!orders){
+            ctx.throw(403, '请提提现的交易订单集合')
+        }
+        function base64Encode(str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+        return `T${base64Encode(`${user_id}${entryType}${orders}`)}`
     },
     sign(params, secretKey) {
       // 过滤空值并排序
@@ -113,8 +141,8 @@ module.exports = createCoreService('api::order.order', ({strapi}) => ({
       return sign;
 
     },
-    card_populate() {
-        return {
+    card_populate(type) {
+        let res = {
             overviews: {
                 populate: {
                     media: {
@@ -125,31 +153,40 @@ module.exports = createCoreService('api::order.order', ({strapi}) => ({
             cover: {
                 fields: ['id', 'ext', 'url']
             },
-            storage: {
-                populate: {
-                    files: {
-                        fields: ['id','name','ext','url']
-                    },
-                    sub_folders: true
-                }
-            },
-            card_documents: {
-                populate: {
-                    creator: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','ext','url']
+            creator: {
+                fields: ['id']
+            }
+        }
+        if(type === 'classroom'){
+            res = {
+                ...res,
+                storage: {
+                    populate: {
+                        files: {
+                            fields: ['id','name','ext','url']
+                        },
+                        sub_folders: true
+                    }
+                },
+                card_documents: {
+                    populate: {
+                        creator: {
+                            fields: ['id','username'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            fields: ['id','ext','url']
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            },
+                },
+            }
         }
+        return res
     },
     async ispaied(...args) {
         const [user_id, card_id] = args;

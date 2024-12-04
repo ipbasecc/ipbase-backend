@@ -60,8 +60,8 @@ const processUserdata = async (_user, _user_id) => {
         if(_user.default_team){
             // @ts-ignore
             let _team = await strapi.service('api::team.team').filterByAuth(_user.default_team, _user_id);
-            
-            _user.default_team = processMembers(_team, _user_id);
+            // console.log('_team', _team)
+            _user.default_team = _team ? processMembers(_team, _user_id) : null;
         }
         return _user
     };

@@ -3,7 +3,7 @@
 /**
  * kanban service
  */
-
+const sale_types = ['classroom', 'resource']
 const { createCoreService } = require('@strapi/strapi').factories;
 
 module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
@@ -117,21 +117,6 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
             return {
                 cards: {
                     populate: {
-                        overviews: {
-                            populate: {
-                                media: {
-                                    fields: ['id', 'ext','url']
-                                }
-                            }
-                        },
-                        storage: {
-                            populate: {
-                                files: {
-                                    fields: ['id','name','ext','url']
-                                },
-                                sub_folders: true,
-                            }
-                        },
                         cover: {
                             fields: ['id', 'ext', 'url']
                         },
@@ -337,29 +322,26 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
             let paiedMap = [];
             const validate = async (card) => {
                 let auth = false
-                if(!card.price || card.price <= 0 && card.published && !card.pulled) {
+                if((!card.price || card.price <= 0) && card.published && !card.pulled) {
                     auth = true
                 } // 免费的 且 已发布
-                // console.log('validate 1', card.id, auth)
+                // console.log('validate free', card.id, auth)
                 if(!auth){
-                    const isCreator = async () => {
-                        if(card.creator?.id === user_id) {
-                            auth = true
-                        } else {
-                            const creator = await strapi.db.query('api::member-role.member-role').findOne({
-                                where: {
-                                    members: {
-                                        by_user: user_id
-                                    },
-                                    by_card: card.id,
-                                    subject: 'creator'
-                                }
-                            })
-                            auth = !!creator
-                        }
+                    if(card.creator?.id === user_id) {
+                        auth = true
+                    } else {
+                        const creator = await strapi.db.query('api::member-role.member-role').findOne({
+                            where: {
+                                members: {
+                                    by_user: user_id
+                                },
+                                by_card: card.id,
+                                subject: 'creator'
+                            }
+                        })
+                        auth = !!creator
                     }
-                    await isCreator();
-                    // console.log('validate 2', card.id, auth)
+                    // console.log('validate isCreator', card.id, auth)
                 }
                 if(!auth){
                     // 购买过或者是card的创建者
@@ -383,7 +365,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                     }
                     auth = !!order
                 }
-                // console.log('validate 3', card.id, auth)
+                // console.log('validate buyer', card.id, auth)
                 // console.log(order)
                 return auth
             }
@@ -410,7 +392,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                         // (没有下架 || 已经购买) && ( 已发布 || 经过验证可以被查看内容的：是作者 / 买过 )
                         const hasDetialAuthMap = authMap.filter(i => i.detailAuth)?.map(j => j.id)
                         const canShow = (_card) => {
-                            return hasDetialAuthMap.includes(_card.id)
+                            return hasDetialAuthMap.includes(_card.id) || (card.published && !card.pulled)
                         }
                         // console.log('canShow',card.id, canShow(card))
                         if (canShow(card)) {
@@ -429,7 +411,7 @@ module.exports = createCoreService('api::kanban.kanban',({strapi}) => ({
                 }));
                 return _kanban;
             }
-            if(kanban_type === 'classroom'){
+            if(sale_types.includes(kanban_type)){
                 kanban = process_payment(kanban)
             }
             return kanban

@@ -73,6 +73,12 @@
       "relation": "oneToMany",
       "target": "api::document.document",
       "mappedBy": "by_team"
+    },
+    "join_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::join-request.join-request",
+      "mappedBy": "team"
     }
   }
 }

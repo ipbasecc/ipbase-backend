@@ -154,8 +154,8 @@ module.exports = createCoreService('api::overview.overview',({strapi}) => ({
                             const ali_params = {
                               url: overview.media?.url,
                               urls: null,
-                        }
-                        await strapi.service('api::ali.ali').removeObject(ali_params)
+                            }
+                            await strapi.service('api::ali.ali').removeObject(ali_params)
                         }
                     } catch (error) {
                       console.error('After update processing error:', error);

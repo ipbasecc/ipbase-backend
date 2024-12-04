@@ -13,7 +13,8 @@
   "pluginOptions": {},
   "attributes": {
     "jeepay_order": {
-      "type": "json"
+      "type": "json",
+      "private": true
     },
     "purpose": {
       "type": "text"
@@ -32,14 +33,39 @@
     },
     "buyer": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "order"
+      "inversedBy": "orders"
     },
     "mchOrderNo": {
-      "type": "text"
+      "type": "text",
+      "private": true
     },
     "payOrderId": {
+      "type": "string"
+    },
+    "revenue_split": {
+      "type": "integer"
+    },
+    "order_transfer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order-transfer.order-transfer",
+      "inversedBy": "orders"
+    },
+    "daily_transaction": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::daily-transaction.daily-transaction",
+      "inversedBy": "completed_orders"
+    },
+    "project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "orders"
+    },
+    "authed_type": {
       "type": "string"
     }
   }

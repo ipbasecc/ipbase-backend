@@ -66,6 +66,10 @@ module.exports = createCoreController('api::kanban.kanban',({strapi}) => ({
             // strapi.provider(room, ydoc);
             let kanban = await strapi.service('api::kanban.kanban').get_kanbanSourceData_byID(kanban_id, kanban_type, user_id);
             if(kanban){
+                // 销售的内容，不需要按照成员权限去修改返回内容
+                if(kanban.type === 'classroom'){
+                    return kanban
+                }
                 const processed_data = strapi.service('api::kanban.kanban').process_KanbanSourceData_byAuth(kanban, user_id, ACL, isSuper_member, belongedInfo);
                 return processed_data
             }

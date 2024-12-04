@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "order_transfers",
+  "info": {
+    "singularName": "order-transfer",
+    "pluralName": "order-transfers",
+    "displayName": "order_transfer"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "mchOrderNo": {
+      "type": "string"
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "order_transfer"
+    },
+    "withdrawer": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "order_transfer"
+    },
+    "jeepay_transferOrder": {
+      "type": "json"
+    }
+  }
+}

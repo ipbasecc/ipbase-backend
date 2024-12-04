@@ -335,6 +335,9 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
     async filterByAuth(...args) {
         let [ team, user_id ] = args;
         const curUserMember = team.members?.find(i => i.by_user?.id === user_id);
+        if(!curUserMember){
+            return null
+        }
         const getChannelAuth = async (channel_id) => {
             return await strapi.service('api::team-channel.team-channel').getRole(user_id,channel_id,'channel');
         }
@@ -342,7 +345,7 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
         // @ts-ignore
         if(team.team_channels?.length > 0){
             // 找到所有公开频道
-            const unjoined_public_channels = team.team_channels.filter(i => !i.members?.map(j => j.id).includes(curUserMember.id) && i.mm_channel.type === 'O');
+            const unjoined_public_channels = team.team_channels.filter(i => !i.members?.map(j => j.id).includes(curUserMember?.id) && i.mm_channel.type === 'O');
             // console.log('public_channels', curUserMember.id, public_channels)
             if(unjoined_public_channels?.length > 0){
                 await Promise.allSettled(unjoined_public_channels.map(async(channel) => {
@@ -385,7 +388,7 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                 }))
             }
             // team = await strapi.service('api::team.team').findTeamByID(team.id);
-            team.team_channels = team.team_channels.filter(i => i.members?.map(j => j.id).includes(curUserMember.id));
+            team.team_channels = team.team_channels.filter(i => i.members?.map(j => j.id).includes(curUserMember?.id));
             // @ts-ignore
             team.team_channels = await Promise.all(team.team_channels.map(async(i) => {
                 let res = {}
@@ -419,6 +422,8 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
             team.projects = await Promise.all(team.projects.map(async(i) => {
                 let res = {}
                 let read;
+                let user_roles = []
+                let is_project_member
                 const role_of_project = await strapi.db.query('api::member-role.member-role').findMany({
                     where: {
                         members: {
@@ -427,7 +432,11 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                         by_project: i.id
                     },
                     populate: {
-                        ACL: true
+                        ACL: {
+                            populate: {
+                                fields_permission: true
+                            }
+                        }
                     }
                 })
                 if(role_of_project?.length > 0){
@@ -435,6 +444,13 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                     const collections = ACLs.filter(j => j.collection === 'project')
                     // console.log('ACLs',ACLs);
                     read = collections.filter(i => i.read)?.length > 0
+                    user_roles = role_of_project.map(i => i.subject)
+                    is_project_member = true
+                    
+                    const can_approve = collections.map(i => i.fields_permission.filter(j => j.modify && j.field === 'approve_join_request')).flat(2)?.length > 0;
+                    if(!can_approve){
+                        delete i.join_requests
+                    }
                 } else {
                     read = false
                 }
@@ -452,7 +468,17 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                         overviews: i.overviews,
                         auth: {
                             read: false
-                        }
+                        },
+                        roles: user_roles,
+                        type: i.type
+                    }
+                    
+                    if(i.type === 'service'){
+                        res.jsonContent = i.jsonContent
+                        res.price = i.price
+                    } else if(!is_project_member){
+                        res.is_project_member = false
+                        res.allow_join_requests = i.preferences?.project_settings?.find(j => j.val === 'allow_join_requests')?.enable || true
                     }
                 }
                 return res
@@ -460,6 +486,13 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
         }
         return team
     },
+    
+    /**
+     * 添加用户到团队
+     * @param {Object} team - 团队对象
+     * @param {string} user_id - 用户ID
+     * @param {Number} memberRole - 用户角色ID
+     */
     async addUser(...args) {
         const [ team, user_id, memberRole ] = args;
         //为当前用户创建一个成员
@@ -593,11 +626,15 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
       // 使用团队ID创建房间名称
       const room_name = `team_room_${team_id}`;
       let ctx = strapi.requestContext.get();
+      const user_id = Number(ctx.state.user.id);
       ctx.room_name = room_name;
       // 将客户端加入房间
       strapi.socket.join(room_name);
-      strapi.$io.raw({ event: 'room:join', rooms: [room_name], data: { message: 'hello' } });
+      strapi.$io.raw({ event: 'room:join', rooms: [room_name], data: { message: 'joined team room' } });
       // strapi.$io.emit({ event: 'room:join', schema, data });
+      const self_room = `user_room_${user_id}`
+      strapi.socket.join(self_room);
+      strapi.$io.raw({ event: 'room:join', rooms: [self_room], data: { message: 'joined self room' } });
     },
     leave(...args) {
       const [ team_id ] = args;
@@ -627,7 +664,7 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
         // console.log('owner_user', owner_member)
         const owner_user = owner_member.by_user
         const team_admin = await strapi.entityService.findOne('plugin::users-permissions.user',owner_user.id, {
-            fields: ['user_level', 'level_expiry_time']
+            fields: ['partner_level', 'level_expiry_time']
         });
         // console.log('team_admin', team_admin)
         
@@ -639,8 +676,22 @@ module.exports = createCoreService('api::team.team',({strapi, socket}) => ({
                 user_level: true
             }
         })
-        const level = team_admin.user_level || 'Regular'
+        // console.log('level_entry', level_entry)
+        let level = team_admin.partner_level || 'Regular'
+        
+        // 为兼容旧字段做的判断
+        if(level === 'level 1'){
+            level = 'Regular'
+        }
+        if(level === 'level 2'){
+            level = 'Professional'
+        }
+        if(level === 'level 3'){
+            level = 'Enterprise'
+        }
+        
         let level_detail = level_entry.user_level.find(i => i.title === level);
+        // console.log('level_detail', level_detail)
         level_detail.expiry_time = team_admin.level_expiry_time
         
         return level_detail

@@ -56,6 +56,12 @@
     },
     "private_meets": {
       "type": "json"
+    },
+    "join_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::join-request.join-request",
+      "mappedBy": "team_channel"
     }
   }
 }

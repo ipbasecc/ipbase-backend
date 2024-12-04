@@ -102,7 +102,7 @@ const team_populate = {
     }
 }
 const responseUser = {
-    fields: ['id','username','email','self_tags','mm_profile', 'initialization', 'feature_key'],
+    fields: ['id','username','email','self_tags','mm_profile', 'initialization', 'feature_key','income','withdraw','partner_level','need_fill_business_account'],
     populate: {
         todogroups: {
             populate: {
@@ -329,6 +329,9 @@ const responseUser = {
                                 }
                             }
                         },
+                        join_requests: {
+                            fields: ['id','approved']
+                        }
                     }
                 }
             }
@@ -386,7 +389,7 @@ module.exports = ({ strapi, originalController }) => {
                         user_level: true
                     }
                 })
-                const level = user.user_level || 'Regular'
+                const level = user.partner_level || 'Regular'
                 user.user_level = level_entry.user_level.find(i => i.title === level)
                 if(user.default_team){
                     const team_id = user.default_team.id;
@@ -673,8 +676,68 @@ module.exports = ({ strapi, originalController }) => {
             if(_has('feature_key')){
               params.feature_key = data.feature_key;
             }
+            params.business_account = {};
+            if(data?.reel_name){
+                params.business_account.real_name = data.reel_name
+            }
+            if(data?.alipay_account){
+                params.business_account.accountNo = data.alipay_account
+            }
+            if(data?.exchange_code && (data?.old_exchange_code || data?.password)){
+                const user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, {
+                    fields: ['id', 'password','need_fill_business_account'],
+                    populate: {
+                        business_account: true
+                    }
+                })
+                // console.log('validate start user', user)
+                const validate_by_password = async () => {
+                    return await strapi.plugins['users-permissions'].services.user.validatePassword(
+                        data.password,
+                        user.password
+                    );
+                }
+                const validate_by_old_exchange_code = async () => {
+                    return await strapi.plugins['users-permissions'].services.user.validatePassword(
+                        data.old_exchange_code,
+                        user.business_account.exchange_code
+                    );
+                }
+                let validate = false
+                // ctx.user 由全局中间件传入
+                // tip: 其它业务逻辑中旧的验证用户登陆或检查字段时，可以按需要修改全局中间件
+                if(user.need_fill_business_account){//该字段默认为true，所有户都需要补充此内容，第一次补充时验证用户登陆密码
+                    validate = await validate_by_password();
+                    // console.log('validate_by_password need_fill_business_account', validate)
+                    if(!validate){
+                        ctx.throw(403, '用户密码错误')
+                    }
+                } else {// 优先使用操作密码验证，允许用户忘记操作密码时使用登陆密码验证，前端要注意：使用逻辑限定只能传一个验证字段
+                    if(data?.old_exchange_code){
+                        validate = await validate_by_old_exchange_code();
+                        // console.log('validate_by_old_exchange_code !need_fill_business_account', validate)
+                        if(!validate){
+                            ctx.throw(403, '旧操作密码错误')
+                        }
+                    } else if (data?.password) {
+                        validate = await validate_by_password();
+                        // console.log('validate_by_password !need_fill_business_account', validate)
+                        if(!validate){
+                            ctx.throw(403, '用户密码错误')
+                        }
+                    }
+                }
+                // console.log('hashPassword a', data.exchange_code)
+                const bcrypt = require('bcryptjs');
+                const salt = await bcrypt.genSalt(10);
+                data.exchange_code = await bcrypt.hash(data.exchange_code, salt);
+                // console.log('hashPassword b', data.exchange_code)
+                params.business_account.exchange_code = data.exchange_code
+                params.need_fill_business_account = false
+            }
+            
             let user = await strapi.entityService.update('plugin::users-permissions.user',user_id,{
-                data: data,
+                data: params,
                 ...responseUser
             })
             if(user) {
@@ -717,7 +780,6 @@ module.exports = ({ strapi, originalController }) => {
             }
         },
         refreshToken: async (ctx) => {
-            
             try {
               const user = ctx.state.user;
               // 检查用户信息是否有效
@@ -735,6 +797,340 @@ module.exports = ({ strapi, originalController }) => {
             } catch (err) {
               return ctx.internalServerError('服务错误');
             }
-        }
+        },
+        queryFavoritedCards: async (ctx) => {
+            const user = ctx.state.user;
+            const user_id = user.id
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const start = ctx.query.start ? Number(ctx.query.start) : 0;
+            const limit = ctx.query.limit ? Number(ctx.query.limit) : 100;
+            const { element } = ctx.query;
+            if(!element){
+                ctx.throw(403, '要查询的 element 是什么？')
+            }
+            // console.log('element', element, 'element', start, 'limit', limit )
+            if(element === 'card'){
+                const cards = await strapi.db.query('plugin::users-permissions.user').findOne({
+                    where: {
+                        id: user_id
+                    },
+                    select: ['id'],
+                    populate: {
+                        favorite_cards: {
+                            offset: start,
+                            limit: limit,
+                            populate: {
+                                select: ['id', 'name', 'description', 'price', 'type', 'resource_type'],
+                                cover: {
+                                    select: ['id', 'ext', 'url']
+                                },
+                                creator: {
+                                    select: ['id','username'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    select: ['id','ext','url']
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                favorite_by_users: {
+                                    where: {
+                                        id: user_id
+                                    },
+                                    select: ['id']
+                                },
+                                by_like_users: {
+                                    where: {
+                                        id: user_id
+                                    },
+                                    select: ['id']
+                                },
+                                orders: {
+                                    where: {
+                                        buyer: user_id
+                                    },
+                                    select: ['id']
+                                }
+                            }
+                        }
+                    }
+                })
+                // console.log('cards', cards )
+                const count = await strapi.db.query('api::card.card').count({
+                    where: {
+                        favorite_by_users: user_id
+                    }
+                })
+                // console.log('count', count )
+                if(cards){
+                    return {
+                        cards: cards.favorite_cards,
+                        count: count
+                    }
+                }
+            }
+        },
+        favoriteCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    favorite_cards: {
+                        connect: [
+                            { id: card_id, position: { start: true } }
+                        ]
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
+        removefavoriteCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    favorite_cards: {
+                        disconnect: card_id
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
+        queryLikedCards: async (ctx) => {
+            const user = ctx.state.user;
+            const user_id = user.id
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const start = ctx.query.start ? Number(ctx.query.start) : 0;
+            const limit = ctx.query.limit ? Number(ctx.query.limit) : 100;
+            const { element } = ctx.query;
+            if(!element){
+                ctx.throw(403, '要查询的 element 是什么？')
+            }
+            // console.log('element', element, 'element', start, 'limit', limit )
+            if(element === 'card'){
+                const cards = await strapi.db.query('plugin::users-permissions.user').findOne({
+                    where: {
+                        id: user_id
+                    },
+                    select: ['id'],
+                    populate: {
+                        like_cards: {
+                            offset: start,
+                            limit: limit,
+                            populate: {
+                                select: ['id', 'name', 'description', 'price', 'type', 'resource_type'],
+                                cover: {
+                                    select: ['id', 'ext', 'url']
+                                },
+                                creator: {
+                                    select: ['id','username'],
+                                    populate: {
+                                        profile: {
+                                            populate: {
+                                                avatar: {
+                                                    select: ['id','ext','url']
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                favorite_by_users: {
+                                    where: {
+                                        id: user_id
+                                    },
+                                    select: ['id']
+                                },
+                                by_like_users: {
+                                    where: {
+                                        id: user_id
+                                    },
+                                    select: ['id']
+                                },
+                                orders: {
+                                    where: {
+                                        buyer: user_id
+                                    },
+                                    select: ['id']
+                                }
+                            }
+                        }
+                    }
+                })
+                // console.log('cards', cards )
+                const count = await strapi.db.query('api::card.card').count({
+                    where: {
+                        by_like_users: user_id
+                    }
+                })
+                // console.log('count', count )
+                if(cards){
+                    return {
+                        cards: cards.like_cards,
+                        count: count
+                    }
+                }
+            }
+        },
+        likeCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    like_cards: {
+                        connect: [
+                            { id: card_id, position: { start: true } }
+                        ]
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
+        removeLikeCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    like_cards: {
+                        disconnect: card_id
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
+        unlikeCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    unlike_cards: {
+                        connect: [
+                            { id: card_id, position: { start: true } }
+                        ]
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
+        removeUnlikeCard: async(ctx) => {
+            const user = ctx.state.user;
+            if (!user) {
+                return ctx.badRequest('用户信息无效');
+            }
+            const { data } = ctx.request.body;
+            if (!data) {
+                return ctx.throw(403, '缺少参数');
+            }
+            const { card_id } = data;
+            if (!card_id) {
+                return ctx.throw(403, '请提供 card_id');
+            }
+            const update = await strapi.db.query('plugin::users-permissions.user').update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    unlike_cards: {
+                        disconnect: card_id
+                    }
+                }
+            })
+            if(update){
+                return 'success'
+            } else {
+                ctx.throw(503, '更新时出错，请刷新后再试')
+            }
+        },
     }
 };

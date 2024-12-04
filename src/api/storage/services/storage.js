@@ -181,7 +181,7 @@ module.exports = createCoreService('api::storage.storage',({strapi}) => ({
         }
     },
     async getCollections(args){
-        const {assign, user_id, project_id, card_id, storage_id} = args;
+        const {assign, user_id, assign_project, assign_card, storage_id} = args;
         
         if(assign === 'card'){
             let collection = await strapi.service('api::storage.storage').collection_by_belonged_card(user_id,assign_card)

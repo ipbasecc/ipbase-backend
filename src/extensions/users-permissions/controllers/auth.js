@@ -27,7 +27,7 @@ module.exports = ({ strapi, originalController }) => {
                     username: formatString(username),
                     password: password,
                 }
-                    console.log('_params', _params)
+                    // console.log('_params', _params)
                 const createMmUser = await mmapi.createUser(_params);
                 if(createMmUser?.data){
                     ctx.request.body.mm_profile = createMmUser.data;

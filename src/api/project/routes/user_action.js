@@ -112,5 +112,29 @@ module.exports = {
             //     "auth": true
             // }
         },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/join_request",
+            "handler": "project.joinRequest",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "POST",
+            "path": "/projects/:project_id/approve_join_request",
+            "handler": "project.approveJoinRequest",
+            // "config": {
+            //     "auth": true
+            // }
+        },
+        {
+            "method": "GET",
+            "path": "/projects/:project_id/check_join_request",
+            "handler": "project.checkJoinRequest",
+            // "config": {
+            //     "auth": true
+            // }
+        },
     ]
 }

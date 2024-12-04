@@ -1,0 +1,32 @@
+{
+  "collectionName": "components_system_partners",
+  "info": {
+    "displayName": "partner",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "level": {
+      "type": "enumeration",
+      "enum": [
+        "Regular",
+        "Professional",
+        "Enterprise"
+      ],
+      "default": "Regular",
+      "required": true,
+      "private": true
+    },
+    "interest": {
+      "type": "decimal",
+      "private": true,
+      "max": 100,
+      "min": 0,
+      "required": true,
+      "default": 70
+    },
+    "transaction_fee": {
+      "type": "decimal"
+    }
+  }
+}

@@ -74,7 +74,7 @@
         "kanban",
         "classroom",
         "segment",
-        "assets"
+        "resource"
       ],
       "default": "kanban"
     }

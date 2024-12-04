@@ -22,7 +22,11 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": true
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": true
+                            },
                         ]
                     }
                 ]
@@ -48,7 +52,11 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     }
                 ]
@@ -74,7 +82,11 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     }
                 ]
@@ -100,7 +112,11 @@ module.exports = {
                             {
                                 "field": "jsonContent",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     }
                 ]

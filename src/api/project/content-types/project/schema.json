@@ -18,9 +18,6 @@
     "description": {
       "type": "text"
     },
-    "type": {
-      "type": "string"
-    },
     "cover": {
       "type": "media",
       "multiple": false,
@@ -113,14 +110,6 @@
       "target": "api::member-role.member-role",
       "mappedBy": "by_project"
     },
-    "readonly": {
-      "type": "boolean",
-      "default": false
-    },
-    "protected": {
-      "type": "boolean",
-      "default": false
-    },
     "project_documents": {
       "type": "relation",
       "relation": "oneToMany",
@@ -163,6 +152,30 @@
     },
     "total_filesize": {
       "type": "decimal"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "project",
+        "service"
+      ],
+      "default": "project",
+      "required": true
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "project"
+    },
+    "join_requests": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::join-request.join-request",
+      "mappedBy": "project"
     }
   }
 }

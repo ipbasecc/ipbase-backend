@@ -69,18 +69,25 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         if(_projects){
             projects = _projects.filter(i => i.publishedAt != null);
             projects = projects.map((i) => {
-                let _ = i.project_members?.find(i => i.by_user.id === user_id)
-                // console.log('_',_);
-                let __ = _.member_roles?.filter(j => j.subject === 'unconfirmed')
-                // console.log('__',__);
-                const unconfirmed = __?.length === 1 && __[0].subject === 'unconfirmed';
-                return unconfirmed && {
-                    id: i.id,
-                    name: i.name,
-                    description: i.description,
-                    overviews: i.overviews,
-                    unconfirmed: true
-                } || i;
+                let res = i
+                let unconfirmed
+                let user_member = i.project_members?.find(i => i.by_user.id === user_id);
+                if(!user_member){
+                    res = {
+                        id: i.id,
+                        name: i.name,
+                        description: i.description,
+                        overviews: i.overviews
+                    }
+                } else {
+                    // console.log('_',_);
+                    let filter_unconfirmed = user_member.member_roles?.filter(j => j.subject === 'unconfirmed')
+                    // console.log('__',__);
+                    if(filter_unconfirmed?.length > 0){
+                        res.unconfirmed = true
+                    }
+                }
+                return i;
             });
 
             // 获取 _cards 的总数
@@ -107,6 +114,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         let auth;
         let __ACL;
         let fields_permission = []
+        let user_roles = []
         let project = await strapi.service('api::project.project').find_projectByID(project_id);
         // console.log('project',project);
         if(project){
@@ -115,6 +123,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
             auth = read
             __ACL = ACL
+            user_roles = role_names
             // console.log('auth',auth,'ACL',__ACL);
 
             let authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'project');
@@ -145,7 +154,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             }
         }
-        
+
         //处理项目的邀请码，只返回用户自己创建的邀请码
         const process_schedule_share = (project) => {
             let _project = project
@@ -156,19 +165,38 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             _project.schedules = schedules;
             return _project
         }
-        
-        //如果是开放项目，直接返回
-        if(project?.type === 'O') {
-            return process_schedule_share(project)
-        }
 
         if(auth && __ACL){
             // console.log('ACL',__ACL);
             const response = strapi.service('api::project.project').process_response(project,__ACL);
-            if(auth) {
-                return process_schedule_share(response)
+            return process_schedule_share(response)
+        } else {
+            const team = await strapi.db.query('api::team.team').findOne({
+                where: {
+                    projects: project_id,
+                    members: {
+                        by_user: user_id
+                    }
+                }
+            })
+            if(team) {
+                let res = {
+                    id: project.id,
+                    name: project.name,
+                    overviews: project.overviews,
+                    auth: {
+                        read: false
+                    },
+                    roles: user_roles,
+                    type: project.type
+                }
+                if(project.type === 'service'){
+                    res.jsonContent = project.jsonContent
+                    res.price = project.price
+                }
+                return res
             } else {
-                return '您无权访问该项目'
+                ctx.throw(403, '您无权访问该项目')
             }
         }
     },
@@ -201,6 +229,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
             let authed_fields = strapi.service('api::project.project').clac_authed_fields(ACL,'project');
             fields_permission = [...fields_permission, ...authed_fields];
+            // console.log(fields_permission?.includes('preferences'))
 
             function arraysEqual(a, b) {
               if (a.length !== b.length) return false;
@@ -308,7 +337,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             }
             return response
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
     },
     async create(ctx) {
@@ -322,27 +351,32 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         } else {
             let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id);
             if(user?.blocked){
-                ctx.throw(401, '当前账户被禁用，如需解禁，请联系管理员申诉')
+                ctx.throw(403, '当前账户被禁用，如需解禁，请联系管理员申诉')
             }
         }
         // 未来可能允许用户创建独立的项目，而不是隶属于某个团队的项目
         // 因此可以允许by_team为空，但是如果by_team不为空，则要鉴权
+        let auth
         let team
-        let _member_by_team
         if(data.by_team){
-            team = await strapi.service('api::team.team').findTeamByID(data.by_team);
-            _member_by_team = await strapi.service('api::team.team').findTeamMemberByUserID(user_id,data.by_team);
-            if(!_member_by_team){
-                ctx.throw(404, '没有找到对应的团队成员')
-            }
-            let auth
-            const _memberRole_by_team = await strapi.service('api::team.team').findTeamRoleByMember(_member_by_team.id, data.by_team?.id, 'project');
-            if(_memberRole_by_team){
-                const { create } = _memberRole_by_team;
-                auth = create
-            };
-            if(!auth) {
-                ctx.throw(401, '您没有新建项目的权限')
+            const role = await strapi.db.query('api::member-role.member-role').findOne({
+                where: {
+                    by_team: data.by_team,
+                    members: {
+                        by_user: user_id
+                    }
+                },
+                populate: {
+                    ACL: true,
+                    by_team: true
+                }
+            })
+            if(role){
+                auth = !!role?.ACL.find(i => i.collection === 'project' && i.create);
+                if(!auth) {
+                    ctx.throw(403, '您没有新建项目的权限')
+                }
+                team = role.by_team
             }
         }
 
@@ -519,75 +553,67 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         const { id } = ctx.params;
         let option = ctx.query.option;
 
-
-        let auth;
-        const project = await strapi.service('api::project.project').find_projectByID(id);
-        if(project){
-            const {
-                read, create, modify, remove, is_blocked, role_names
-            } = await strapi.service('api::project.project').clac_project_auth(project, user_id);
-            auth = remove
-
-            if(is_blocked){
-                auth = false
-                ctx.throw(500, '您已被管理员屏蔽，请联系管理员申诉')
-            } else if(role_names.includes('unconfirmed')){
-                auth = false
-                return '您无权删除当前项目'
-            }else if(role_names.includes('external')){
-                auth = false
-                ctx.throw(400, '外部成员不允许删除项目')
+        const roles = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                by_project: Number(id),
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: true,
+                by_project: {
+                    select: ['id', 'mm_channel']
+                }
             }
+        })
+        // console.log(roles)
+        const auth = !!roles.map(i => i.ACL)?.flat(2).find(j => j.collection === 'project' && j.delete)
+        if(!auth) {
+            ctx.throw(403, '您无权删除该项目')
         }
 
-        if(auth) {
-            const team_id = project?.by_team.id
-            if(option === 'archive') {
-                const update_project = await strapi.entityService.update('api::project.project',id,{
+        const team_id = ctx.default_team?.id;
+        if(option === 'archive') {
+            const update_project = await strapi.entityService.update('api::project.project',id,{
+                data: {
+                    publishedAt: null
+                },
+                fields: ['id']
+            })
+            // 如果后期用户需要恢复归档，那么需要调用Mattermost的恢复频道API
+            if(update_project) {
+                strapi.$publish('project:project_achived', [ctx.room_name], {
+                    team_id: team_id,
+                    project_id: id,
                     data: {
-                        publishedAt: null
-                    },
-                    fields: ['id']
-                })
-                // 如果后期用户需要恢复归档，那么需要调用Mattermost的恢复频道A
-                if(update_project) {
-                    if(team_id){
-                        strapi.$publish('project:project_achived', [`team_room_${team_id}`], {
-                            team_id: team_id,
-                            project_id: id,
-                            data: {
-                                project_id: id
-                            }
-                        });
+                        project_id: id
                     }
-                    return {
-                        project_id: id,
-                        status: 'achived'
-                    }
-                }
-            } else {
-                const mmChannel_id = project.mm_channel?.id;
-                const mmapi = strapi.plugin('mattermost').service('mmapi');
-                await mmapi.deleteChannel(mmChannel_id);
-                const delete_project = await strapi.entityService.delete('api::project.project',id);
-                if(delete_project) {
-                    if(team_id){
-                        strapi.$publish('project:project_deleted', [`team_room_${team_id}`], {
-                            team_id: team_id,
-                            project_id: id,
-                            data: {
-                                project_id: id
-                            }
-                        });
-                    }
-                    return {
-                        project_id: id,
-                        status: 'deleted'
-                    }
+                });
+                return {
+                    project_id: id,
+                    status: 'achived'
                 }
             }
         } else {
-            ctx.throw(401, '您无权删除该项目')
+            const project = roles[0].by_project
+            const mmChannel_id = project.mm_channel?.id;
+            const mmapi = strapi.plugin('mattermost').service('mmapi');
+            await mmapi.deleteChannel(mmChannel_id);
+            const delete_project = await strapi.entityService.delete('api::project.project',id);
+            if(delete_project) {
+                strapi.$publish('project:project_deleted', [ctx.room_name], {
+                    team_id: team_id,
+                    project_id: id,
+                    data: {
+                        project_id: id
+                    }
+                });
+                return {
+                    project_id: id,
+                    status: 'deleted'
+                }
+            }
         }
     },
     async genInvite(ctx) {
@@ -656,7 +682,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             }
 
         } else {
-            ctx.throw(401, '您无权删除该项目')
+            ctx.throw(403, '您无权删除该项目')
         }
     },
     async visitInvite(ctx) {
@@ -668,11 +694,11 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             return
         }
         if(!project_id) {
-            ctx.throw(401, '缺少项目ID')
+            ctx.throw(403, '缺少项目ID')
             return
         }
         if(!invite_code) {
-            ctx.throw(401, '缺少邀请码')
+            ctx.throw(403, '缺少邀请码')
             return
         }
         const project = await strapi.service('api::project.project').find_projectByID(project_id);
@@ -725,17 +751,26 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
             const isUnconfirmed = role_names.includes('unconfirmed');
             if(isUnconfirmed) {
-                // ctx.throw(204, '您已经接受了邀请，请等待项目管理员审核')
                 const res = {
                     error: {
                         message: '您已经接受了邀请，请等待项目管理员审核'
                     }
                 }
                 return res
-            }
-
-            if(is_blocked){
-                ctx.throw(401, '您已被项目管理员屏蔽，如需申诉，请联系管理员')
+            }else if(is_blocked){
+                const res = {
+                    error: {
+                        message: '您已被项目管理员屏蔽，如需申诉，请联系管理员'
+                    }
+                }
+                return res
+            } else if(role_names?.length > 0){
+                const res = {
+                    error: {
+                        message: '您已经是团队成员了！'
+                    }
+                }
+                return res
             } else {
                 let __ = project.invite_uris.find(i => i.invite_code == invite_code)
                 let res = {
@@ -759,7 +794,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
         }
         const { project_id, invite_code } = ctx.params;
         if(!project_id) {
-            ctx.throw(401, '项目ID不能缺少')
+            ctx.throw(403, '项目ID不能缺少')
         }
         let isInvitor;
         let isUnconfirmed;
@@ -804,10 +839,10 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
 
                 if(invite.max_total === invite.was_inviteds.length) {
                     invite.enable = false; // todo 待验证
-                    ctx.throw(401, '该邀请链接已超过使用次数');
+                    ctx.throw(403, '该邀请链接已超过使用次数');
                     return
                 } else if(invite.up_time && endTimeStamp < currentTimeStamp) {
-                    ctx.throw(401, '该邀请链接已过保质期');
+                    ctx.throw(403, '该邀请链接已过保质期');
                     return
                 }
             }
@@ -815,14 +850,32 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             isInvitor = project.invite_uris.map(i => i.invitor.id === user_id && i.invite_code).includes(invite_code);
             isUnconfirmed = role_names.includes('unconfirmed');
             if(isUnconfirmed) {
-                ctx.throw(204, '您已经接受了邀请，请等待项目管理员审核')
+                const res = {
+                    error: {
+                        message: '您已经接受了邀请，请等待项目管理员审核'
+                    },
+                    code: 301
+                }
+                return res
             }
             if(isInvitor && !isUnconfirmed) {
-                ctx.throw(204, '您是该邀请链接的创建者，可以直接进入项目，无需使用此链接')
+                const res = {
+                    error: {
+                        message: '您是该邀请链接的创建者，可以直接进入项目，无需使用此链接'
+                    },
+                    code: 301
+                }
+                return res
             }
 
             if(is_blocked){
-                ctx.throw(401, '您已被项目管理员屏蔽，如需申诉，请联系管理员')
+                const res = {
+                    error: {
+                        message: '您已被项目管理员屏蔽，如需申诉，请联系管理员'
+                    },
+                    code: 301
+                }
+                return res
             }
         }
         // console.log(project);
@@ -932,7 +985,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             auth = strapi.service('api::project.project').calc_field_ACL(ACL,'project','manageMember');
 
             if(is_blocked){
-                ctx.throw(401, '您已被项目管理员屏蔽，如需申诉，请联系管理员')
+                ctx.throw(403, '您已被项目管理员屏蔽，如需申诉，请联系管理员')
             }
         }
 
@@ -975,7 +1028,7 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
             return response
 
         } else {
-            ctx.throw(401, '您无权执行此操作')
+            ctx.throw(403, '您无权执行此操作')
         }
     },
     async setRole(ctx) {
@@ -1693,6 +1746,273 @@ module.exports = createCoreController('api::project.project',({strapi}) => ({
                 }
             } else {
                 ctx.throw(403, '您无权执行此操作')
+            }
+        }
+    },
+    async joinRequest(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(403,'请先登陆')
+        }
+        const {data} = ctx.request.body;
+        
+        const { project_id, message } = data
+        if(!project_id){
+            ctx.throw(403,'需要提供要加入的 project_id')
+        }
+        
+        let join_request
+        try{
+            const exit_request = await strapi.db.query('api::join-request.join-request').findOne({
+                where: {
+                    request_user: +user_id,
+                    project: +project_id
+                }
+            })
+            if(exit_request){
+                return {
+                    success: true,
+                    is_repetition: true,
+                    message: '您已经申请过了，请耐心等待管理人员审核'
+                }
+            }
+            join_request = await strapi.db.query('api::join-request.join-request').create({
+                data: {
+                    request_user: +user_id,
+                    project: +project_id,
+                    message: message
+                }
+            })
+            if(join_request){
+                return {
+                    success: true,
+                    message: '请求已成功发送，请等待管理人员审核'
+                }
+            }
+        } catch (e){
+            console.error('create join request error:', e)
+            ctx.throw(500, `error: ${e}`)
+        } finally {
+            const params = {
+                project_id: project_id,
+                field: 'approve_join_request'
+            }
+            const can_approved_users = await strapi.service('api::project.project').findHasAuthUserByField(params);
+            if(can_approved_users?.length > 0){
+                console.log('can_approved_users', can_approved_users)
+                const rooms = can_approved_users.map(i => `user_room_${i}`)
+                const send = {
+                    project_id: project_id
+                }
+                strapi.$io.raw({ event: 'project:new_join_request', rooms: rooms, data: send });
+            }
+        }
+    },
+    async checkJoinRequest(ctx) {
+        await this.validateQuery(ctx);
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(403,'请先登陆')
+        }
+        const project_id = ctx.request.params.project_id;
+        if(!project_id){
+            ctx.throw(403,'缺少 project_id ')
+        }
+        const members_of_target_project = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                by_project: project_id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const project_fields_permission = members_of_target_project?.map(i => i.ACL.filter(j => j.collection === 'project')).flat(2).map(k => k.fields_permission).flat(2)
+        // console.log(project_fields_permission)
+        const auth = project_fields_permission?.filter(i => i.field === 'approve_join_request' && i.modify)?.length > 0
+        if(!auth){
+            ctx.throw(403,'您无权查看此内容。')
+        }
+        return await strapi.db.query('api::join-request.join-request').findMany({
+            select: ['id','message'],
+            where: {
+                project: project_id,
+                approved: false
+            },
+            populate: {
+                request_user: {
+                    select: ['id', 'username'],
+                    populate: {
+                        profile: {
+                            populate: {
+                                avatar: {
+                                    select: ['id','ext','url']
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    },
+    async approveJoinRequest(ctx) {
+        const user_id = Number(ctx.state.user.id);
+        if(!user_id){
+            ctx.throw(403,'请先登陆')
+        }
+        
+        const {data} = ctx.request.body;
+        const { join_request_id, approved } = data
+        // console.log('join_request_id', join_request_id)
+        // console.log('approved', approved)
+        const join_request = await strapi.db.query('api::join-request.join-request').findOne({
+            where: {
+                id: join_request_id
+            },
+            populate: {
+                request_user: {
+                    select: ['id', 'mm_profile']
+                },
+                project: {
+                    select: ['id', 'mm_channel'],
+                    populate: {
+                        by_team: {
+                            select: ['id', 'mm_team'],
+                            populate: {
+                                team_channels: {
+                                    select: ['id', 'mm_channel'],
+                                    populate: {
+                                        member_roles: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        // console.log('join_request', join_request)
+        const request_user = join_request?.request_user
+        if(!request_user){
+            ctx.throw(301,'缺少申请用户数据')
+        }
+        const target_project = join_request?.project
+        if(!target_project){
+            ctx.throw(301,'没有找到对应的project')
+        }
+        
+        const members_of_target_project = await strapi.db.query('api::member-role.member-role').findMany({
+            where: {
+                by_project: target_project.id,
+                members: {
+                    by_user: user_id
+                }
+            },
+            populate: {
+                ACL: {
+                    populate: {
+                        fields_permission: true
+                    }
+                }
+            }
+        })
+        const project_fields_permission = members_of_target_project?.map(i => i.ACL.filter(j => j.collection === 'project')).flat(2).map(k => k.fields_permission).flat(2)
+        // console.log(project_fields_permission)
+        const auth = project_fields_permission?.filter(i => i.field === 'approve_join_request' && i.modify)?.length > 0
+        // console.log('project_fields_permission', project_fields_permission)
+        if(!auth){
+            ctx.throw(403,'您没有执行此操作的权限')
+        }
+        await strapi.db.query('api::join-request.join-request').update({
+             where: {
+                 id: Number(join_request_id)
+             },
+             data: {
+                 approved: approved,
+                 response_user: user_id
+             }
+         })
+        if(approved === false){
+            return {
+                message: '您已拒绝了该申请'
+            }
+        }
+        
+        const target_team = join_request?.project?.by_team
+        if(!target_team){
+            ctx.throw(301,'没有找到对应的team')
+        }
+        let team_member = await strapi.db.query('api::member.member').findOne({
+            where: {
+                by_user: request_user.id,
+                by_team: target_team.id
+            }
+        })
+        console.log('team_member', team_member)
+        if(!team_member){
+            const member_role_of_team = await strapi.db.query('api::member-role.member-role').findOne({
+                where: {
+                    subject: 'member',
+                    by_team: target_team.id
+                }
+            })
+            try{
+                team_member = await strapi.service('api::team.team').addUser(target_team, request_user.id, member_role_of_team.id);
+                if(team_member){
+                    try{
+                        await strapi.service('api::team.team').joinPublicChannel(target_team, team_member);
+                    }catch(e){
+                        console.error('加入团队公共频道时出错：', e)
+                    }
+                    
+                }
+            }catch(e){
+                ctx.throw(501,`创建团队成员时出错: ${e}`)
+            }
+        }
+        const member_role_of_project = await strapi.db.query('api::member-role.member-role').findOne({
+            where: {
+                subject: 'member',
+                by_project: target_project.id
+            }
+        })
+        console.log('member_role_of_project', member_role_of_project)
+        let join_project
+        try{
+            join_project = await strapi.service('api::project.project').addUser(target_project, team_member, member_role_of_project.id);
+            console.log('join_project', join_project)
+            try{
+                 await strapi.service('api::project.project').addUser_to_mmChannel(target_project, request_user.id);
+            }catch(e){
+                ctx.throw(501,`加入聊天频道时出错: ${e}`)
+            }
+            if(join_project){
+                return join_project
+            }
+        }catch(e){
+            ctx.throw(501,`加入项目时出错: ${e}`)
+        }finally{
+            if(join_project){
+                strapi.$publish('project:join', [`team_room_${target_team.id}`], {
+                    team_id: target_team.id,
+                    project_id: target_project.id,
+                    data: {
+                        member: join_project
+                    }
+                });
+                const request_user_room = `user_room_${request_user.id}`
+                const send = {
+                    team_id: target_team.id,
+                    project_id: target_project.id
+                }
+                strapi.$io.raw({ event: 'user:project:joined', rooms: [request_user_room], data: send });
             }
         }
     }

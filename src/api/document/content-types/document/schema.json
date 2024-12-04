@@ -26,9 +26,9 @@
     },
     "creator": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "document"
+      "inversedBy": "documents"
     },
     "by_project": {
       "type": "relation",

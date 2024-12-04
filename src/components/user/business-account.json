@@ -1,0 +1,33 @@
+{
+  "collectionName": "components_user_business_accounts",
+  "info": {
+    "displayName": "business_account",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "real_name": {
+      "type": "string",
+      "required": true,
+      "private": true
+    },
+    "cash_entry_type": {
+      "type": "enumeration",
+      "enum": [
+        "WX_CASH",
+        "ALIPAY_CASH"
+      ],
+      "default": "ALIPAY_CASH",
+      "private": true
+    },
+    "accountNo": {
+      "type": "string",
+      "private": true
+    },
+    "exchange_code": {
+      "type": "password",
+      "private": true,
+      "required": true
+    }
+  }
+}

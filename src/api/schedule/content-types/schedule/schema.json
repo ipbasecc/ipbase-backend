@@ -65,9 +65,9 @@
     },
     "creator": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "created_schedule"
+      "inversedBy": "created_schedules"
     },
     "private": {
       "type": "boolean",

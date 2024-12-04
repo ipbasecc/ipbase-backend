@@ -30,6 +30,14 @@ module.exports = (plugin) => {
         update: userController.update,
         findKanbanByTodogroup: userController.findKanbanByTodogroup,
         refreshToken: userController.refreshToken,
+        queryFavoritedCards: userController.queryFavoritedCards,
+        favoriteCard: userController.favoriteCard,
+        removefavoriteCard: userController.removefavoriteCard,
+        queryLikedCards: userController.queryLikedCards,
+        likeCard: userController.likeCard,
+        removeLikeCard: userController.removeLikeCard,
+        unlikeCard: userController.unlikeCard,
+        removeUnlikeCard: userController.removeUnlikeCard,
     };
     plugin.controllers.auth = {
         ...originalAuthController,  // 保留其他原始方法
@@ -107,6 +115,78 @@ module.exports = (plugin) => {
           method: 'GET',
           path: '/user/me/refreshToken',
           handler: 'user.refreshToken',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'GET',
+          path: '/user/me/favorites/cards',
+          handler: 'user.queryFavoritedCards',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/favorites/cards/add',
+          handler: 'user.favoriteCard',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/favorites/cards/remove',
+          handler: 'user.removefavoriteCard',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'GET',
+          path: '/user/me/likes/cards',
+          handler: 'user.queryLikedCards',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/likes/cards/add',
+          handler: 'user.likeCard',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/likes/cards/remove',
+          handler: 'user.removeLikeCard',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/unlikes/cards/add',
+          handler: 'user.unlikeCard',
+          config: {
+              perfix: '',
+              policies: []
+          }
+      },
+      {
+          method: 'POST',
+          path: '/user/me/unlikes/cards/remove',
+          handler: 'user.removeUnlikeCard',
           config: {
               perfix: '',
               policies: []

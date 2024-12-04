@@ -22,7 +22,11 @@ module.exports = {
                             {
                                 "field": "statistics",
                                 "read": true
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": true
+                            },
                         ]
                     },
                     {
@@ -97,7 +101,11 @@ module.exports = {
                             {
                                 "field": "statistics",
                                 "read": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -172,7 +180,11 @@ module.exports = {
                             {
                                 "field": "statistics",
                                 "read": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -247,7 +259,11 @@ module.exports = {
                             {
                                 "field": "statistics",
                                 "read": false
-                            }
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {

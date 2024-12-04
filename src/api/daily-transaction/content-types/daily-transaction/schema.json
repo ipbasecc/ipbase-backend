@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "daily_transactions",
+  "info": {
+    "singularName": "daily-transaction",
+    "pluralName": "daily-transactions",
+    "displayName": "daily_transaction",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "transaction_date": {
+      "type": "date",
+      "unique": true
+    },
+    "by_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "daily_transaction"
+    },
+    "completed_orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "daily_transaction"
+    },
+    "income": {
+      "type": "decimal"
+    },
+    "expenses": {
+      "type": "decimal"
+    },
+    "completed_orders_count": {
+      "type": "integer"
+    }
+  }
+}

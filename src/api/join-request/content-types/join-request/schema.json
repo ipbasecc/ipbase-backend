@@ -1,0 +1,56 @@
+{
+  "kind": "collectionType",
+  "collectionName": "join_requests",
+  "info": {
+    "singularName": "join-request",
+    "pluralName": "join-requests",
+    "displayName": "join_request",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "message": {
+      "type": "text"
+    },
+    "response_message": {
+      "type": "text"
+    },
+    "request_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "join_requests"
+    },
+    "response_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "response_join_requests"
+    },
+    "team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "join_requests"
+    },
+    "project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "join_requests"
+    },
+    "team_channel": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team-channel.team-channel",
+      "inversedBy": "join_requests"
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

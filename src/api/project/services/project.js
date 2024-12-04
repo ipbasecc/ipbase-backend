@@ -225,7 +225,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
     },
     async clac_projectCard_auth(...args){
         const [ project_id, user_id, collection ] = args;
-        
+        // console.log('collection', collection)
         const project_roles_by_user = await strapi.db.query('api::member-role.member-role').findMany({
             where: {
                 by_project: project_id,
@@ -249,7 +249,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
         
         const collectionAuth = (_collection) => {
             const ACLs = ACL.filter(i => i.collection === _collection);
-            console.log('project_roles_by_user ACLs', ACLs)
+            // console.log('project_roles_by_user ACLs', ACLs)
             return {
                 read: ACLs.filter(i => i.read)?.length > 0,
                 create: ACLs.filter(i => i.create)?.length > 0,
@@ -260,7 +260,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
         }
         
         const { read, create, modify, remove, authed_fields } = collectionAuth(collection);
-        // console.log('ACL',ACL);
+        // console.log('read 1',read);
         return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
     },
     async process_updateProject_params(...args){
@@ -375,10 +375,19 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
           }
       }
       if(data.preferences) {
+        //   console.log(fields_permission?.includes('preferences'))
           if(fields_permission.includes('preferences')) {
               params.preferences = data.preferences
           } else {
               ctx.throw(403, '您无权执行此操作')
+          }
+      }
+      if(data.price) {
+        //   console.log(fields_permission?.includes('preferences'))
+          if(fields_permission.includes('price')) {
+              params.price = data.price
+          } else {
+              ctx.throw(403, '您无权修改价格')
           }
       }
       return params
@@ -393,6 +402,11 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
         const { read:read_kanban } = strapi.service('api::project.project').calc_collection_auth(__ACL,'kanban');
         const { read:read_storage } = strapi.service('api::project.project').calc_collection_auth(__ACL,'storage');
         const { read:read_schedule } = strapi.service('api::project.project').calc_collection_auth(__ACL,'schedule');
+        const can_approve = strapi.service('api::project.project').calc_field_ACL(__ACL,'project','approve_join_request');
+        
+        if(!can_approve){
+            delete project.join_requests
+        }
 
         if(!read_board) {
             project.boards = []
@@ -688,6 +702,9 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
                         }
                     }
                 }
+            },
+            join_requests: {
+                fields: ['id','approved']
             }
         }
         return res
@@ -717,13 +734,16 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
     async addUser_to_mmChannel(...args){
 
         // https://your-mattermost-url.com/api/v4/channels/{channel_id}/members
-        const [project,target_user_id,target_member] = args;
+        const [project,target_user_id] = args;
 
         let joined_user = await strapi.entityService.findOne('plugin::users-permissions.user',target_user_id);
 
         const team_id = project.by_team?.mm_team?.id;
         const channel_id = project.mm_channel?.id;
         const mm_user_id = joined_user.mm_profile.id;
+        
+        // console.log('project', project)
+        // console.log('joined_user', joined_user)
 
         let member_team;
         let member_channel;
@@ -801,7 +821,7 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
     async addUser(...args) {
         const [ project, teamMember, memberRole ] = args;
         // console.log('addUser',project, teamMember, memberRole);
-        const user_id = teamMember.by_user?.id;
+        // const user_id = teamMember.by_user?.id;
 
         if(teamMember){
             const updateMember = await strapi.entityService.update('api::member.member',teamMember.id,{
@@ -832,6 +852,8 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
                 }
             })
             return updateMember
+        } else {
+            ctx.throw(501,'缺少加入项目的团队成员数据')
         }
     },
     filterResponseByAuth(...args){
@@ -861,6 +883,55 @@ module.exports = createCoreService('api::project.project', ({ strapi }) => ({
             }
         }
         return res
+    },
+    async findHasAuthUserByField(args) {
+        const {project_id, field} = args;
+        const knex = strapi.db.connection;
+        try {
+            if (!project_id || typeof project_id !== 'number') {
+                throw new Error('Invalid project_id');
+            }
+    
+            const result = await knex.raw(`
+                WITH authorized_roles AS (
+                    SELECT DISTINCT mr.id as role_id
+                    FROM member_roles mr
+                    JOIN member_roles_by_project_links mrp ON mr.id = mrp.member_role_id
+                    JOIN member_roles_components mrc ON mr.id = mrc.entity_id
+                    JOIN components_project_collection_permissions cp ON cp.id = mrc.component_id
+                    JOIN components_project_collection_permissions_components cpcp ON cp.id = cpcp.entity_id
+                    JOIN components_project_fields_permissions fp ON fp.id = cpcp.component_id
+                    WHERE mrp.project_id = ?
+                    AND mrc.component_type = 'project.collection-permission'
+                    AND cpcp.component_type = 'project.fields-permission'
+                    AND fp.field = 'approve_join_request'
+                    AND fp.modify = true
+                )
+                SELECT DISTINCT mbu.user_id
+                FROM members m
+                JOIN members_by_projects_links mpl ON m.id = mpl.member_id
+                JOIN member_roles_members_links mrml ON m.id = mrml.member_id
+                JOIN members_by_user_links mbu ON m.id = mbu.member_id
+                WHERE mpl.project_id = ?
+                AND mrml.member_role_id IN (SELECT role_id FROM authorized_roles)
+            `, [project_id, project_id]);
+    
+            const userIds = result.rows.map(row => row.user_id);
+    
+            // 开发环境下的调试日志
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Authorized user IDs:', userIds);
+            }
+    
+            return userIds;
+    
+        } catch (error) {
+            console.error('Error finding users with permission:', error);
+            if (error.message === 'Invalid project_id') {
+                throw new Error('Invalid project ID provided');
+            }
+            throw error;
+        }
     }
   }));
   

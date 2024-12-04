@@ -4,17 +4,17 @@
 /**
  * card service
  */
-
+const sale_types = ['classroom', 'resource']
 const { createCoreService } = require('@strapi/strapi').factories;
 
 module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     async initRole(...args) {
-      const [user_id,member_byCurUser,card_type] = args;
+      const [user_id,member_byCurUser,card_type,is_sale] = args;
       const { roleBase } = require('./roleBase.js');
 
       try {
         let role_base = roleBase();
-        if(card_type === 'classroom'){
+        if(is_sale){
             role_base = role_base.filter(i => i.role === 'creator')
         }
 
@@ -146,11 +146,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 }
             }
         })
-        if(card?.column?.kanban?.card){
-            return true
-        } else {
-            return false
-        }
+        return !!card?.column?.kanban?.card
     },
     async sync_mpsInfo(...args) {
       const [overviews] = args;
@@ -184,72 +180,86 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     async find_cardByID(...args) {
         const ctx = strapi.requestContext.get();
         const [card_id, props] = args;
+        
+        // 不同类型的卡片，需要查询的关联内容不同
+        // 先查询一次基础内容
+        // 再根据类型确定是否要再次查询，之后返回数据
+        // 所有类型都要返回的关联内容
         let populate = {
             cover: {
-                fields: ['id', 'ext', 'url']
+                select: ['id', 'ext', 'url']
             },
             overviews: {
                 populate: {
                     media: {
-                        fields: ['id', 'ext','url']
-                    },
-                    marker_todos: {
-                        populate: {
-                            attachment: {
-                                fields: ['id', 'ext','url']
-                            }
-                        }
-                    }
-                }
-            },
-            storage: {
-                populate: {
-                    files: {
-                        fields: ['id','name','ext','url']
-                    },
-                    sub_folders: true,
-                    creator: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                fields: ['title'],
-                                populate: {
-                                    avatar: {
-                                        fields: ['ext','url']
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            card_documents: {
-                populate: {
-                    creator: {
-                        fields: ['id','username'],
-                        populate: {
-                            profile: {
-                                populate: {
-                                    avatar: {
-                                        fields: ['id','ext','url']
-                                    }
-                                }
-                            }
-                        }
+                        select: ['id', 'ext','url']
                     }
                 }
             },
             creator: {
-                fields: ['id']
+                select: ['id','username'],
+                populate: {
+                    profile: {
+                        populate: {
+                            avatar: {
+                                select: ['id', 'ext', 'url']
+                            }
+                        }
+                    }
+                }
             }
         }
-        if(props !== 'classroom'){
+        let select = ['id', 'name', 'type', 'default_version', 'color_marker', 'price', 'description', 'jsonContent', 'createdAt', 'allow_discover', 'resource_type', 'auth_type', 'auth_extened', 'price_by_auth', 'published', 'pulled' ]
+        const findCard = async () => {
+            return await strapi.db.query('api::card.card').findOne({
+                where: {
+                    id: card_id
+                },
+                select: select,
+                populate: populate
+            })
+        }
+        let card = await findCard();
+        if(!card){
+            ctx.throw(404, '没有找到对应内容')
+        }
+        // 如果是课程，添加关联
+        if(card.type === 'classroom'){
+            populate = {
+                ...populate,
+                storage: {
+                    populate: {
+                        files: {
+                            select: ['id','name','ext','url']
+                        },
+                        sub_folders: true
+                    }
+                },
+                card_documents: {
+                    populate: {
+                        creator: {
+                            select: ['id','username'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            select: ['id','ext','url']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            select = ['id', 'name', 'type', 'default_version', 'color_marker', 'price', 'description', 'jsonContent', 'createdAt', 'allow_discover', 'auth_type', 'published', 'pulled']
+        } else { // 其它类型 ['task','todo','note']
             populate = {
                 ...populate,
                 share_codes: {
                     populate: {
                         creator: {
-                            fields: ['id','username'],
+                            select: ['id','username'],
                         }
                     }
                 },
@@ -258,30 +268,30 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         todos: {
                             populate: {
                                 attachment: {
-                                    fields: ['id','ext','url']
+                                    select: ['id','ext','url']
                                 }
                             }
                         }
                     }
                 },
                 followed_bies: {
-                    fields: ['id','mm_profile'],
+                    select: ['id','mm_profile'],
                     populate: {
                         profile: {
                             populate: {
                                 avatar: {
-                                    fields: ['id', 'ext','url']
+                                    select: ['id', 'ext','url']
                                 },
                                 brand: {
-                                    fields: ['id', 'ext','url']
+                                    select: ['id', 'ext','url']
                                 },
                                 cover: {
-                                    fields: ['id', 'ext','url']
+                                    select: ['id', 'ext','url']
                                 },
                             }
                         },
                         user_channel: {
-                            fields: ['id']
+                            select: ['id']
                         }
                     }
                 },
@@ -291,32 +301,69 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         todos: true
                     }
                 },
+                storage: {
+                    populate: {
+                        files: {
+                            select: ['id','name','ext','url']
+                        },
+                        sub_folders: true,
+                        creator: {
+                            select: ['id','username'],
+                            populate: {
+                                profile: {
+                                    select: ['title'],
+                                    populate: {
+                                        avatar: {
+                                            select: ['ext','url']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                card_documents: {
+                    populate: {
+                        creator: {
+                            select: ['id','username'],
+                            populate: {
+                                profile: {
+                                    populate: {
+                                        avatar: {
+                                            select: ['id','ext','url']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 schedule: {
                     populate: {
                         schedule_events: {
                             populate: {
                                 creator: {
-                                    fields: ['id','username'],
+                                    select: ['id','username'],
                                     populate: {
                                         profile: {
                                             populate: {
                                                 avatar: {
-                                                    fields: ['id','url','ext']
+                                                    select: ['id','url','ext']
                                                 }
                                             }
                                         }
                                     }
                                 },
                                 executor: {
-                                    fields: ['id','color_marker','description','nickname','position','is_blocked','private_email'],
+                                    select: ['id','color_marker','description','nickname','position','is_blocked','private_email'],
                                     populate: {
                                         by_user: {
-                                            fields: ['id','username'],
+                                            select: ['id','username'],
                                             populate: {
                                                 profile: {
                                                     populate: {
                                                         avatar: {
-                                                            fields: ['id','url','ext']
+                                                            select: ['id','url','ext']
                                                         }
                                                     }
                                                 }
@@ -329,7 +376,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                         share_codes: {
                             populate: {
                                 creator: {
-                                    fields: ['id','username'],
+                                    select: ['id','username'],
                                 }
                             }
                         }
@@ -338,19 +385,19 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 card_members: {
                     populate: {
                         by_user: {
-                            fields: ['id','username','mm_profile'],
+                            select: ['id','username','mm_profile'],
                             populate: {
                                 profile: {
                                     populate: {
                                         avatar: {
-                                            fields: ['id','url','ext']
+                                            select: ['id','url','ext']
                                         }
                                     }
                                 }
                             }
                         },
                         member_roles: {
-                            fields: ['id','subject']
+                            select: ['id','subject']
                         }
                     }
                 },
@@ -365,15 +412,23 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 },
                 card_kanban: true
             }
-        } else {
-            delete populate.storage.populate.creator
-            delete populate.overviews.marker_todos
+            select = ['id', 'name', 'type', 'default_version', 'color_marker', 'description', 'createdAt', 'status', 'jsonContent', 'default_version', 'importance', 'urgency', 'score', 'mm_thread', 'mm_feedback_group', 'disable_share', 'updatedAt']
         }
-        let card = await strapi.entityService.findOne('api::card.card',card_id,{
-            populate: populate
-        })
+        if(card.type !== 'resource'){
+            card = await findCard();
+        } 
+        if(card.type === 'resource'){
+            card.auth_types = [
+                'exclusive',
+                'commercial',
+                'non-commercia',
+                'educational',
+                'personal'
+            ]
+        }
+        
         if(card) {
-            if(card.overviews?.length > 0){
+            if(card.overviews?.length > 0 && card.type === 'classroom'){
                 card.overviews = await strapi.service('api::card.card').sync_mpsInfo(card.overviews);
             }
             return card
@@ -442,7 +497,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
     async clac_finalAuth_byCardID(...args){
         const [ card_id, user_id, collection ] = args;
         const matchCardMember = async(user_id, card_id) => {
-            const matchMemberByUserID = await strapi.db.query('api::member-role.member-role').findMany({
+            return await strapi.db.query('api::member-role.member-role').findMany({
                 where: {
                     by_card: card_id,
                     members: {
@@ -450,13 +505,12 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                     }
                 }
             })
-            return !!matchMemberByUserID
         }
-        const isCardMember = await matchCardMember(user_id, card_id)
-        // console.log('isCardMember 1', isCardMember)
-        if(isCardMember){
+        const cardMembers = await matchCardMember(user_id, card_id)
+        // console.log('cardMembers 1', cardMembers)
+        if(cardMembers?.length > 0){
             const collection = 'card'
-            const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(card_id, user_id,collection);
+            const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(card_id, user_id, collection);
             return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
         } else {
             const belongedInfo = await strapi.service('api::card.card').find_belongedInfo_byCardID(card_id);
@@ -465,7 +519,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
             if(belongedInfo?.belonged_card){
                 const _card_id = belongedInfo.belonged_card.id
                 _isCardMember = await matchCardMember(user_id, _card_id)
-                if(_isCardMember){
+                if(_isCardMember?.length > 0){
                     // console.log('isCardMember 3', _isCardMember)
                     const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } = await strapi.service('api::card.card').clac_card_auth(_card_id, user_id,collection);
                     return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
@@ -476,7 +530,8 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 // console.log('belonged_project 3')
                 const _project = belongedInfo.belonged_project;
                 const { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields } =
-                    strapi.service('api::project.project').clac_projectCard_auth(_project.id,user_id,collection);
+                    await strapi.service('api::project.project').clac_projectCard_auth(_project.id,user_id,collection);
+                // console.log('read 2',read);
                 return { read, create, modify, remove, is_blocked, role_names, ACL, authed_fields }
             }
         }
@@ -758,11 +813,26 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         if(data.data?.published && isCreate){
             params.published = true
         }
+        if (isCreate && 'allow_discover' in data.data) {
+            params.allow_discover = data.data.allow_discover;
+        }
+        if (isCreate && data.data?.resource_type) {
+            params.resource_type = data.data.resource_type;
+        }
+        if (isCreate && data.data?.auth_extened) {
+            params.auth_extened = data.data.auth_extened;
+        }
+        if (isCreate && data.data?.price_by_auth) {
+            params.price_by_auth = data.data.price_by_auth;
+        }
+        if (isCreate && data.data?.cover) {
+            params.cover = data.data.cover;
+        }
 
         return params
     },
     async initFullCard(...args){
-        let [card] = args;
+        let [card,user_id] = args;
         const initKanbanCard = async () => {
             if(card && !card.card_kanban) {
                 var now = new Date();
@@ -807,7 +877,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
         }
     },
     card_populate_template(...args) {
-        const [card_type] = args
+        const [card_type,can_sales] = args
         let populate = {
             creator: {
                 fields: ['id', 'username'],
@@ -908,7 +978,7 @@ module.exports = createCoreService('api::card.card', ({ strapi }) => ({
                 }
             },
         }
-        if(card_type !== 'classroom'){
+        if(!can_sales.includes(card_type)){
             populate = {
                 ...populate,
                 share_codes: {

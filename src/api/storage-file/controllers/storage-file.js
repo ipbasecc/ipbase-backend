@@ -17,7 +17,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
         if(!user_id){
             ctx.throw(500, '请先登陆')
         }
-
+        
         let file_for_get_project
         let total_size = 0
         const batchCreate = async (Arr) => {
@@ -48,9 +48,9 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                 return null;
               }
             });
-
+          
             const results = await Promise.allSettled(promises);
-
+          
             // 过滤掉失败的 Promise 结果
             const successfulResults = results
               .filter((result) => result.status === 'fulfilled')
@@ -58,7 +58,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
               .map((result) => result.value);
             return successfulResults;
           };
-
+          
         const result = await batchCreate(data);
         if(result){
             // console.log('result result', result);
@@ -67,7 +67,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                 data: result
             }
             strapi.$publish('file:batchCreated', [ctx.room_name], response);
-
+            
             process.nextTick(async () => {
                 try {
                     // console.log('file_for_get_project', file_for_get_project, total_size);
@@ -90,7 +90,7 @@ module.exports = createCoreController('api::storage-file.storage-file',({strapi}
                   console.error('After update processing error:', error);
                 }
             });
-
+            
             return result
         }
     },

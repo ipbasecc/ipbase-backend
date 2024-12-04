@@ -11,5 +11,28 @@
     "draftAndPublish": false
   },
   "pluginOptions": {},
-  "attributes": {}
+  "attributes": {
+    "accessKeyId": {
+      "type": "text",
+      "private": true
+    },
+    "accessKeySecret": {
+      "type": "text",
+      "private": true
+    },
+    "users": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "ali"
+    },
+    "sts_accessKeyId": {
+      "type": "text",
+      "private": true
+    },
+    "sts_accessKeySecret": {
+      "type": "text",
+      "private": true
+    }
+  }
 }

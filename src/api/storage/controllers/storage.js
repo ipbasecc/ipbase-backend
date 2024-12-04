@@ -61,7 +61,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
     },
     async update(ctx) {
         const user_id = Number(ctx.state.user.id);
-        const { id } = ctx.params;
+        const { id:storage_id } = ctx.params;
         let body = ctx.request.body;
 
         let data = body.data;
@@ -71,7 +71,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
         }
         let auth
         const checkAuth = 'write'
-        const storage = await strapi.service('api::storage.storage').get_storage_byID(id);
+        const storage = await strapi.service('api::storage.storage').get_storage_byID(storage_id);
         const selfAuth = await strapi.service('api::storage.storage').storageSelfAuth({storage_id,user_id,checkAuth});
         auth = selfAuth.write
         if(!auth){
@@ -99,7 +99,7 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
             if(data.color_marker) {
                 params.color_marker = data.color_marker
             }
-            const update = await strapi.entityService.update('api::storage.storage',id,{
+            const update = await strapi.entityService.update('api::storage.storage',storage_id,{
                 data: params,
                 fields: ['id','name'],
                 populate: {
@@ -154,14 +154,15 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
         if(assign_card){
             const assign = 'card'
             const collections = await strapi.service('api::storage.storage').getCollections({
-                assign,user_id,card_id
+                assign,user_id,assign_card
             })
             auth = collections.filter(i => i.create)?.length > 0
         }
         if(assign_project){
             const assign = 'project'
+            const project_id = assign_project
             const collections = await strapi.service('api::storage.storage').getCollections({
-                assign,user_id,project_id
+                assign,user_id,assign_project
             })
             auth = collections.filter(i => i.create)?.length > 0
         }
@@ -301,7 +302,6 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                     }
                 });
                 if (this_storage) {
-                    // console.log('this_storage',this_storage);
                     if (this_storage.storage_files?.length > 0) {
                         // console.log('this_storage',this_storage);
                         const files = this_storage.storage_files.map(i => i.id);
@@ -327,32 +327,20 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                         );
                     } 
                     // console.log('process_ids_for_delete',__remove);
-                    return __remove;
                 }
+                return __remove;
             };
             
             const res = await process_ids_for_delete(Number(id));   
             if(res){
-                
+                // console.log('res',res);
                 let storage_need_delete = res.storage_need_delete;
                 let file_need_delete = res.file_need_delete;
-                let total_remove_size = res.file_size_for_count.reduce((a, b) => a + b);
+                let total_remove_size = res.file_size_for_count.reduce((a, b) => a + b, 0);
                 let source_file_need_delete = res.source_file_need_delete;
                 
                 process.nextTick(async () => {
                     try {
-                        const belongedInfo = await strapi.service('api::storage-file.storage-file').find_belongedInfo_byFileID(file_need_delete[0]);
-                        if(belongedInfo){
-                            // console.log('process.nextTick belongedInfo');
-                            const project = belongedInfo.belonged_project
-                            if(project){
-                              // 删除多个文件
-                              source_file_need_delete.map(async(i) => {
-                                  await strapi.plugins.upload.services.upload.remove({id: i});
-                              })
-                            }
-                        }
-        
                         let done = [ false, false ]
                         if(storage_need_delete.length > 0){
                             // console.log('storage_need_delete',storage_need_delete);
@@ -383,6 +371,12 @@ module.exports = createCoreController('api::storage.storage',({strapi}) => ({
                         // console.log('done',done);
                         if(done.includes(false)) {
                             console.error(res, '批量删除出错')
+                        }
+                        if(source_file_need_delete?.length > 0){
+                          // 删除多个文件
+                          source_file_need_delete.map(async(i) => {
+                              await strapi.plugins.upload.services.upload.remove({id: i});
+                          })
                         }
                     } catch (error) {
                       console.error('After update processing error:', error);

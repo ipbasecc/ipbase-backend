@@ -59,6 +59,11 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
             kanban_name_by_type = '默认桌面';
             column_name_by_type = 'reel 0';
         }
+        if(data?.type === 'resource'){
+            group_name_by_type = '一级分组';
+            kanban_name_by_type = '二级分组';
+            column_name_by_type = '三级分组';
+        }
         new_column = await strapi.entityService.create('api::column.column',{
             data: {
                 name: column_name_by_type,
@@ -81,7 +86,7 @@ module.exports = createCoreService('api::board.board', ({ strapi }) => ({
         if(new_kanban){
         new_group = await strapi.entityService.create('api::group.group',{
             data: {
-                name: kanban_name_by_type,
+                name: group_name_by_type,
                 creator: user_id,
                 kanbans: {
                     connect: [new_kanban.id]

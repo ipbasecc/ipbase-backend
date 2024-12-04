@@ -3,7 +3,7 @@
 /**
  * overview controller
  */
-
+const sale_types = ['classroom', 'resource']
 const { createCoreController } = require('@strapi/strapi').factories;
 
 module.exports = createCoreController('api::overview.overview',({strapi}) => ({
@@ -22,7 +22,7 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         let data = ctx.request.body.data;
 
         if(!user_id) {
-            return '您无权访问该数据'
+            return '请先登陆'
         }
         if(!attach_to) {
             return '需要提供附加对象'
@@ -54,7 +54,9 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         if(attach_to === 'card') {
             let members
             card = await strapi.service('api::card.card').find_cardByID(attach_to_id);
-            if(card){
+            if(card?.creator?.id === user_id){
+                auth = true
+            }else if(card){
                 members = card.card_members;
                 const member_roles = card.member_roles;
                 const users = members.map(i => i.by_user.id);
@@ -110,6 +112,13 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         })
         if(new_overview) {
             response.data = new_overview
+            if(sale_types.includes(card.type)){
+                delete response.data.media
+                response.data.card = {
+                    id: card.id,
+                    type: card.type
+                }
+            }
             strapi.$publish('overview:created', [ctx.room_name], response);
             return new_overview;
         }
@@ -153,33 +162,29 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
         }
 
         let auth;
-        let prv_media_size;
-        let prv_media_url;
         const overview = await strapi.service('api::overview.overview').find_overview_byID(id);
+        
         if(overview){
             // 已售出的内容不能删除
             if(overview.card){
                 const canRemove = await strapi.service('api::card.card').checkRemoveLock({
-                    card_id: overview.card
+                    card_id: overview.card.id
                 })
+                // return canRemove
                 if(canRemove.locked){
                     return canRemove.message
                 }
             }
             
-            prv_media_size = overview.media.size;
-            prv_media_url = overview.media.url;
             const calc_info = await strapi.service('api::overview.overview').calc_overview_auth(overview,user_id);
             auth = calc_info.remove
         }
-
         if(auth) {
-            let deleteOverview = await strapi.entityService.delete('api::overview.overview', id);
-            if(deleteOverview) {
-            }
             process.nextTick(async () => {
                 try {
-                    await strapi.service('api::overview.overview').remove_overview(overview)
+                    await strapi.service('api::overview.overview').remove_overview({
+                        overview: overview
+                    })
                 } catch (error) {
                   console.error('After update processing error:', error);
                 }
@@ -188,6 +193,17 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                 team_id: ctx.default_team?.id,
                 data: {
                     removed_overview: id
+                }
+            }
+            if(overview.card){
+                response.data.card = {
+                    id: overview.card.id,
+                    type: overview.card.type
+                }
+            }
+            if(overview.project){
+                response.data.project = {
+                    id: overview.project.id
                 }
             }
             strapi.$publish('overview:deleted', [ctx.room_name], response);
@@ -240,11 +256,13 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                         fields: ['id','total_filesize']
                     },
                     card: {
-                        fields: ['id']
+                        fields: ['id', 'type']
                     }
                 }
             });
-            if(update_overview?.media?.id && !update_overview?.mps_info){
+            // 是否开启转码
+            const MTS_ENABLE = process.env.MTS_ENABLE === 'true';
+            if(update_overview?.media?.id && !update_overview?.mps_info && MTS_ENABLE){
                 media_size = update_overview.media.size || 0
                 const mediaURL = strapi.service('api::ali.ali').processUrl(update_overview?.media?.url, update_overview?.media?.ext);
                 // console.log('mediaURL',mediaURL)
@@ -255,9 +273,13 @@ module.exports = createCoreController('api::overview.overview',({strapi}) => ({
                     // }
                 }
             }
-            const response = {
+            let response = {
                 team_id: ctx.default_team?.id,
                 data: update_overview
+            }
+            if(update_overview?.card?.type === 'classroom'){
+                delete response.data.media
+                delete response.data.mps_info
             }
             strapi.$publish('overview:updated', [ctx.room_name], response);
             

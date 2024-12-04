@@ -42,10 +42,6 @@ module.exports = {
                                 "modify": true
                             },
                             {
-                                "field": "remove_version",
-                                "modify": true
-                            },
-                            {
                                 "field": "default_version",
                                 "modify": true
                             },
@@ -84,7 +80,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": true
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": true
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": true
+                            },
                         ]
                     },
                     {
@@ -290,10 +294,6 @@ module.exports = {
                             },
                             {
                                 "field": "create_version",
-                                "modify": true
-                            },
-                            {
-                                "field": "remove_version",
                                 "modify": true
                             },
                             {
@@ -573,10 +573,6 @@ module.exports = {
                                 "modify": true
                             },
                             {
-                                "field": "remove_version",
-                                "modify": true
-                            },
-                            {
                                 "field": "default_version",
                                 "modify": true
                             },
@@ -615,7 +611,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": true
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": true
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": true
+                            },
                         ]
                     },
                     {
@@ -821,10 +825,6 @@ module.exports = {
                             },
                             {
                                 "field": "create_version",
-                                "modify": true
-                            },
-                            {
-                                "field": "remove_version",
                                 "modify": true
                             },
                             {
@@ -1077,7 +1077,7 @@ module.exports = {
                         "create": false,
                         "delete": false,
                         "read": true,
-                        "modify": false,
+                        "modify": true,
                         "fields_permission": [
                             {
                                 "field": "name",
@@ -1097,10 +1097,6 @@ module.exports = {
                             },
                             {
                                 "field": "create_version",
-                                "modify": true
-                            },
-                            {
-                                "field": "remove_version",
                                 "modify": true
                             },
                             {
@@ -1146,7 +1142,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": true
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -1352,10 +1356,6 @@ module.exports = {
                             },
                             {
                                 "field": "create_version",
-                                "modify": true
-                            },
-                            {
-                                "field": "remove_version",
                                 "modify": true
                             },
                             {
@@ -1608,7 +1608,7 @@ module.exports = {
                         "create": false,
                         "delete": false,
                         "read": true,
-                        "modify": false,
+                        "modify": true,
                         "fields_permission": [
                             {
                                 "field": "name",
@@ -1673,7 +1673,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -2127,7 +2135,7 @@ module.exports = {
                         "create": false,
                         "delete": false,
                         "read": true,
-                        "modify": false,
+                        "modify": true,
                         "fields_permission": [
                             {
                                 "field": "name",
@@ -2192,7 +2200,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -2646,7 +2662,7 @@ module.exports = {
                         "create": false,
                         "delete": false,
                         "read": true,
-                        "modify": false,
+                        "modify": true,
                         "fields_permission": [
                             {
                                 "field": "name",
@@ -2711,7 +2727,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -3234,7 +3258,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -3757,7 +3789,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {
@@ -4280,7 +4320,15 @@ module.exports = {
                             {
                                 "field": "budget",
                                 "modify": false
-                            }
+                            },
+                            {
+                                "field": "price",
+                                "modify": false
+                            },
+                            {
+                                "field": "approve_join_request",
+                                "modify": false
+                            },
                         ]
                     },
                     {

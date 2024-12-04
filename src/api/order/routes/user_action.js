@@ -17,12 +17,36 @@ module.exports = {
             // }
         },
         {
+            "method": "POST",
+            "path": "/order/transfer_notify",
+            "handler": "order.transferNotify",
+            // "config": {
+            //     "auth": false,
+            // }
+        },
+        {
             "method": "GET",
             "path": "/order/payment_redirect",
             "handler": "order.paymentRedirect",
             // "config": {
             //     "auth": false,
             // }
-        }
+        },
+        {
+            "method": "GET",
+            "path": "/sales",
+            "handler": "order.sales",
+            // "config": {
+            //     "auth": false,
+            // }
+        },
+        {
+            "method": "POST",
+            "path": "/order/withdraw",
+            "handler": "order.withdraw",
+            // "config": {
+            //     "auth": false,
+            // }
+        },
     ]
 }
