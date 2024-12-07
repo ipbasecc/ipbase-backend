@@ -3,20 +3,30 @@ const user = require('./content-types/user');
 const createUserController = require('./controllers/user');
 const createAuthController = require('./controllers/auth');
 
+const wechatProvider = require('./providers/wechat');
+const grantConfig = require('./config/grant-config');
+
+
 module.exports = (plugin) => {
     // 保存原始控制器方法的引用
     const originalAuthController = plugin.controllers.auth;
     const originalUserController = plugin.controllers.user;
 
     // 创建自定义控制器，传入原始控制器引用和 strapi 实例
-    const userController = createUserController({ 
+    const userController = createUserController({
         strapi,  // 直接使用 strapi 实例
-        originalController: originalUserController 
+        originalController: originalUserController
     });
-    const authController = createAuthController({ 
+    const authController = createAuthController({
         strapi,  // 直接使用 strapi 实例
-        originalController: originalAuthController 
+        originalController: originalAuthController
     });
+
+    // 修改 auth controller 配置
+    plugin.controllers.auth = {
+        ...originalAuthController,
+        callback: authController.callback
+    };
 
     // 确保完全覆盖 auth 控制器
     plugin.controllers.user = {
@@ -38,14 +48,9 @@ module.exports = (plugin) => {
         removeLikeCard: userController.removeLikeCard,
         unlikeCard: userController.unlikeCard,
         removeUnlikeCard: userController.removeUnlikeCard,
+        batchUpdateMattermostPasswords: userController.batchUpdateMattermostPasswords
     };
-    plugin.controllers.auth = {
-        ...originalAuthController,  // 保留其他原始方法
-        register: authController.register,
-        resetPassword: authController.resetPassword,
-        changePassword: authController.changePassword
-    };
-    
+
     plugin.contentTypes.user = user;
     plugin.routes['content-api'].routes.push(
       {
@@ -182,17 +187,96 @@ module.exports = (plugin) => {
               perfix: '',
               policies: []
           }
-      },
+        },
+        {
+            method: 'POST',
+            path: '/user/me/unlikes/cards/remove',
+            handler: 'user.removeUnlikeCard',
+            config: {
+                perfix: '',
+                policies: []
+            }
+        },
+        {
+            method: 'POST',
+            path: '/user/me/batch-update-mm-passwords',
+            handler: 'user.batchUpdateMattermostPasswords',
+            config: {
+                prefix: '',
+                policies: []
+            }
+        }
+    )
+    // 修改路由配置
+    const wechatRoutes = [
       {
-          method: 'POST',
-          path: '/user/me/unlikes/cards/remove',
-          handler: 'user.removeUnlikeCard',
+          method: 'GET',
+          path: '/auth/wechat/callback',  // 主回调路由
+          handler: 'auth.callback',
           config: {
-              perfix: '',
+              auth: false,
+              prefix: '',
               policies: []
           }
       },
-    )
+      {
+          method: 'GET',
+          path: '/connect/wechat/redirect',  // 新增重定向路由
+          handler: 'auth.callback',
+          config: {
+              auth: false,
+              prefix: '',
+              policies: []
+          }
+      }
+  ];
+      // 添加路由
+      plugin.routes['content-api'].routes.push(...wechatRoutes);
 
+    // 获取原始的 providers service
+    const providersService = plugin.services.providers({strapi});
+
+    // 保存原始的 bootstrap 方法
+    const originalBootstrap = plugin.bootstrap;
+
+    // 扩展 bootstrap 方法
+    plugin.bootstrap = async function(app) {
+      await originalBootstrap.call(this, app);
+
+      // 更新 grant 配置
+      const grantStore = strapi.store({
+          type: 'plugin',
+          name: 'users-permissions',
+          key: 'grant'
+      });
+
+      // 更新 provider 配置
+      const providersStore = strapi.store({
+          type: 'plugin',
+          name: 'users-permissions',
+          key: 'providers'
+      });
+
+      const [currentGrantConfig, currentProvidersConfig] = await Promise.all([
+          grantStore.get(),
+          providersStore.get()
+      ]);
+
+      // 更新配置
+      await Promise.all([
+          grantStore.set({
+              value: {
+                  ...currentGrantConfig,
+                  ...grantConfig
+              }
+          }),
+          providersStore.set({
+              value: {
+                  ...currentProvidersConfig,
+                  ...grantConfig
+              }
+          })
+      ]);
+  };
     return plugin;
 }

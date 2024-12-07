@@ -41,13 +41,15 @@ module.exports = createCoreController('api::team.team',({strapi}) => ({
         
         if(teams){
             for (const team of teams) {
-                // 使用 Set 提高查找效率
-                const roleSet = new Set(team.member_roles.map(role => role.subject));
+                const unconfirmedRole = team.member_roles.find(role => role.subject === 'unconfirmed');
+                const isunconfirmed = unconfirmedRole.members.map(i => i.by_user?.id)?.includes(user_id);
+                const blockedRole = team.member_roles.find(role => role.subject === 'blocked');
+                const isblocked = blockedRole.members.map(i => i.by_user?.id)?.includes(user_id);
                 
-                if (roleSet.has('unconfirmed')) {
+                if (isunconfirmed) {
                     team.status = 'unconfirmed';
                     delete team.members;
-                } else if (roleSet.has('blocked')) {
+                } else if (isblocked) {
                     team.status = 'blocked';
                     delete team.members;
                 }

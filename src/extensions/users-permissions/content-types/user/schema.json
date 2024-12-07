@@ -454,6 +454,15 @@
       "relation": "manyToMany",
       "target": "api::card.card",
       "inversedBy": "by_unlike_users"
+    },
+    "mm_password": {
+      "type": "text",
+      "private": true
+    },
+    "wechat": {
+      "type": "component",
+      "repeatable": false,
+      "component": "user.wechat"
     }
   }
 }

@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_user_wechat",
+  "info": {
+    "displayName": "wechat",
+    "description": "微信用户信息"
+  },
+  "options": {},
+  "attributes": {
+    "openid": {
+      "type": "string",
+      "unique": true
+    },
+    "unionid": {
+      "type": "string"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "string"
+    }
+  }
+}

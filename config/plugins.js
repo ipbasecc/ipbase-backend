@@ -1,19 +1,3 @@
-// async function getTeamIdFromUser(strapi, socket) {
-//   // 从 socket 认证信息中获取用户ID
-//   const userId = socket.handshake.auth.user.id;
-//   // 根据用户ID获取用户所属的团队ID
-//   // 这里需要调用你的用户服务或团队服务来获取信息
-//   let user = await strapi.entityService.findOne('plugin::users-permissions.user',user_id, {
-//       populate: {
-//           default_team: {
-//               fields: ['id']
-//           }
-//       }
-//   });
-//   const teamId = user?.default_team?.id;
-//   return teamId;
-// }
-
 module.exports = ({ env }) => ({
     "users-permissions": {
         config: {
@@ -23,6 +7,18 @@ module.exports = ({ env }) => ({
           jwt: {
             expiresIn: '7d',
           },
+          grantConfig: {
+            wechat: {
+              enabled: true,
+              icon: 'wechat',
+              key: env('WECHAT_APP_ID'),
+              secret: env('WECHAT_APP_SECRET'),
+              callback: '/api/connect/wechat/callback',
+              scope: ['snsapi_login'],
+              transport: 'session',
+              state: true
+            }
+          }
         },
     },
     graphql: {
@@ -39,6 +35,20 @@ module.exports = ({ env }) => ({
         apolloServer: {
           tracing: false,
           cache: "bounded",
+            // 配置正确的 body parser 选项
+            // 在 GraphQL 请求中，Apollo Server 和 koa-bodyparser 都在尝试读取请求体，导致了冲突。
+            // 这样配置：
+            // 1. 保持了 body parser 的功能
+            // 2. 设置了合理的限制
+            // 3. 允许处理不同类型的请求体
+            // 4. 避免了与 koa-bodyparser 的冲突
+            bodyParserConfig: {
+              limit: '10mb', // 设置了整体请求体大小限制
+              formLimit: '10mb', // 表单数据的大小限制
+              jsonLimit: '10mb', // JSON 数据的大小限制
+              textLimit: '10mb', // 文本数据的大小限制
+              multipart: true, // 支持多部分请求
+            }
         },
       },
     },

@@ -1132,5 +1132,69 @@ module.exports = ({ strapi, originalController }) => {
                 ctx.throw(503, '更新时出错，请刷新后再试')
             }
         },
+        
+        // 此方法是更新所有用户的Mattermost密码，因为开发过程中对Mattermost用户的处理方案变化，需要在Strapi存储Mattermost用户密码，并且不再由用户前端发起Mattermost登陆
+        batchUpdateMattermostPasswords: async(ctx) => {
+            return `don't do this without auth`
+            const mattermostProvider = require('../providers/mattermost');
+            try {
+                const mmapi = strapi.plugin('mattermost').service('mmapi');
+                // 获取所有有 mm_profile 的用户
+                const users = await strapi.db.query('plugin::users-permissions.user').findMany({
+                    select: ['id', 'email', 'mm_profile'],
+                    where: {
+                        mm_profile: { $ne: null }  // 只获取有 mm_profile 的用户
+                    }
+                });
+
+                let results = [];
+                for (const user of users) {
+                    try {
+                        const mm_userId = user.mm_profile?.id;
+                        if (mm_userId) {
+                            // 生成新密码
+                            const newPassword = mattermostProvider.generateStrongPassword();
+                            // 加密密码
+                            const encryptedPassword = mattermostProvider.encryptPassword(newPassword);
+
+                            // 更新 Mattermost 密码
+                            await mmapi.updateUserPassword(mm_userId, newPassword);  // 使用 mm_userId 而不是 userId
+
+                            // 更新 Strapi 用户
+                            await strapi.db.query('plugin::users-permissions.user').update({
+                                where: { id: user.id },
+                                data: { mm_password: encryptedPassword }  // 直接使用加密后的密码
+                            });
+
+                            results.push({
+                                email: user.email,  // 添加邮箱便于追踪
+                                update_user_id: user.id,
+                                update_mm_user_id: mm_userId,
+                                status: 'success'
+                            });
+                        }
+                    } catch (userError) {
+                        console.error(`Failed to update user ${user.email}:`, userError);
+                        results.push({
+                            email: user.email,
+                            update_user_id: user.id,
+                            update_mm_user_id: user.mm_profile?.id,
+                            status: 'error',
+                            error: userError.message
+                        });
+                    }
+                }
+
+                ctx.body = {  // 使用 ctx.body 返回结果
+                    total: users.length,
+                    success: results.filter(r => r.status === 'success').length,
+                    failed: results.filter(r => r.status === 'error').length,
+                    results
+                };
+            } catch (error) {
+                console.error('Batch update error:', error);
+                ctx.throw(500, error);
+            }
+        }
     }
 };
